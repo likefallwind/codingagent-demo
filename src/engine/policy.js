@@ -25,6 +25,33 @@ export function openChecks(learner, concept) {
   return (concept.checks ?? []).filter((c) => !passed.has(c.id))
 }
 
+/**
+ * The check to re-ask once every check has been passed but mastery is still short.
+ *
+ * A wrong answer followed by a retry leaves the check passed yet the estimate
+ * lowered, so "all checks passed" does not imply "mastered". Without somewhere
+ * to earn more evidence the learner is stranded — labs like the tree reader lock
+ * once solved. First come checks never passed on a fresh attempt (a correct
+ * answer straight after a wrong one on the same check is a retry, not a clean
+ * pass); after that, the least recently attempted check, so there is always a
+ * next question.
+ */
+export function reviewCheck(learner, concept) {
+  const checks = concept.checks ?? []
+  if (checks.length === 0) return null
+  const evidence = learner.concepts[concept.id]?.evidence ?? []
+  const history = (id) => evidence.filter((e) => e.detail?.checkId === id && typeof e.correct === 'boolean')
+
+  const unclean = checks.find((c) => {
+    const h = history(c.id)
+    return !h.some((e, i) => e.correct && (i === 0 || h[i - 1].correct))
+  })
+  if (unclean) return unclean
+
+  const lastSeen = (id) => history(id).at(-1)?.ts ?? 0
+  return checks.reduce((a, b) => (lastSeen(b.id) < lastSeen(a.id) ? b : a))
+}
+
 /** True once the learner has made at least one real attempt in the concept's lab. */
 export function labAttempted(learner, conceptId) {
   return (learner.concepts[conceptId]?.evidence ?? []).some((e) => e.kind === 'labAction')
@@ -117,8 +144,16 @@ export function nextAction(learner, course) {
     }
   }
 
-  // Checks exhausted but mastery still short — send them back to the lab, where
-  // fresh evidence can still be generated.
+  // Checks exhausted but mastery still short — re-ask one, since a check can
+  // always produce fresh evidence and a solved lab may not.
+  const review = reviewCheck(learner, concept)
+  if (review) {
+    return {
+      type: 'check', conceptId: concept.id, check: review, review: true,
+      why: `题目都做过了，但掌握度 ${Math.round(state.mastery * 100)}% 还没到 ${Math.round(MASTERY_THRESHOLD * 100)}%，再做一遍巩固一下。`,
+    }
+  }
+
   if (concept.lab) {
     return {
       type: 'lab', conceptId: concept.id, lab: concept.lab, replay: true,

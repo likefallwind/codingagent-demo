@@ -5,7 +5,7 @@ import {
   initLearner, recordEvidence, markExplained, updateMastery, conceptStatus,
   activeMisconceptions, progress, MASTERY_THRESHOLD, STRUGGLING_THRESHOLD,
 } from '../src/engine/learnerModel.js'
-import { nextAction, explainDecision, openChecks } from '../src/engine/policy.js'
+import { nextAction, explainDecision, openChecks, reviewCheck } from '../src/engine/policy.js'
 
 /**
  * A course about baking bread. Nothing to do with decision trees — if the engine
@@ -152,6 +152,41 @@ test('a passed check does not come back', () => {
   l = recordEvidence(l, { conceptId: 'gluten', kind: 'mcq', correct: true, detail: { checkId: 'g1' } })
   const concept = bread.concepts[0]
   assert.deepEqual(openChecks(l, concept).map((c) => c.id), ['g2'])
+})
+
+test('passing every check after a retry never strands the learner below mastery', () => {
+  // Lab right, g1 right, g2 wrong then right on retry: every check is passed but
+  // mastery sits near 0.74. The policy must keep offering something to answer
+  // until the concept is mastered — the tree-reader lab locks once solved.
+  let l = markExplained(initLearner(bread), 'gluten')
+  const ans = (kind, correct, checkId) =>
+    (l = recordEvidence(l, { conceptId: 'gluten', kind, correct, detail: checkId ? { checkId } : null }))
+  ans('labAction', true)
+  ans('mcq', true, 'g1')
+  ans('freeResponse', false, 'g2')
+  ans('freeResponse', true, 'g2')
+
+  const concept = bread.concepts[0]
+  assert.deepEqual(openChecks(l, concept), [])
+  assert.ok(l.concepts.gluten.mastery < MASTERY_THRESHOLD)
+
+  const first = nextAction(l, bread)
+  assert.equal(first.type, 'check')
+  assert.equal(first.review, true)
+  assert.equal(first.check.id, 'g2', 'the check only passed on a retry comes back first')
+
+  for (let i = 0; i < 10 && nextAction(l, bread).type === 'check'; i++) {
+    const { check } = nextAction(l, bread)
+    ans(check.kind, true, check.id)
+  }
+  assert.equal(conceptStatus(l, bread, 'gluten'), 'mastered')
+})
+
+test('once every check has a clean pass, review rotates to the least recent', () => {
+  let l = markExplained(initLearner(bread), 'gluten')
+  const at = (ts, checkId) => ({ ts, conceptId: 'gluten', kind: 'mcq', correct: true, detail: { checkId } })
+  l.concepts.gluten = { ...l.concepts.gluten, evidence: [at(1, 'g1'), at(2, 'g2'), at(3, 'g1')] }
+  assert.equal(reviewCheck(l, bread.concepts[0]).id, 'g2')
 })
 
 test('mastering a concept advances to the next, then completes the course', () => {

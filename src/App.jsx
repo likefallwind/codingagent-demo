@@ -49,6 +49,10 @@ export default function App() {
   // changes what the policy wants next, the card unmounts, and the explanation
   // of why the answer was right flashes past unread.
   const [pinnedCheckId, setPinnedCheckId] = useState(null)
+  // Bumped each time the learner moves past a question. When the policy re-asks
+  // a check for review it has the same id, and without a fresh key the card
+  // would come back still showing the previous answer.
+  const [checkRound, setCheckRound] = useState(0)
 
   const concept = course.concepts.find((c) => c.id === L.learner.currentConceptId) ?? course.concepts[0]
   const modelReady = L.learner.courseId === course.id
@@ -242,7 +246,7 @@ export default function App() {
 
           {activeCheck && (
             <CheckCard
-              key={`${concept.id}:${activeCheck.id}`}
+              key={`${concept.id}:${activeCheck.id}:${checkRound}`}
               course={course}
               concept={concept}
               check={activeCheck}
@@ -251,7 +255,7 @@ export default function App() {
               onEvidence={handleEvidence}
               onAnswered={() => setPinnedCheckId(activeCheck.id)}
               onWrong={handleWrongAnswer}
-              onContinue={() => setPinnedCheckId(null)} />
+              onContinue={() => { setPinnedCheckId(null); setCheckRound((r) => r + 1) }} />
           )}
 
           {status === 'mastered' && (
