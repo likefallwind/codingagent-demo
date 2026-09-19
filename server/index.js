@@ -12,7 +12,7 @@ import { existsSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { getCourse, getConcept } from '../src/courses/index.js'
-import { gradeAnswer, diagnoseLabAction, answerQuestion, generateHint } from './tutor.js'
+import { gradeAnswer, diagnoseLabAction, hintForWrongChoice, answerQuestion, generateHint } from './tutor.js'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 
@@ -113,6 +113,26 @@ app.post('/api/tutor/diagnose', async (req, res) => {
     res.json(result)
   } catch (err) {
     console.error('[diagnose]', err.message)
+    res.status(502).json({ error: err.message })
+  }
+})
+
+/** Hint after a wrong multiple-choice pick — without giving the answer away. */
+app.post('/api/tutor/check-hint', async (req, res) => {
+  const found = resolve(req, res)
+  if (!found) return
+  const { concept } = found
+  const { checkId, choice, learner, misconceptionHistory } = req.body
+
+  const check = concept.checks.find((c) => c.id === checkId)
+  if (!check || check.kind !== 'mcq') return res.status(400).json({ error: `unknown mcq checkId: ${checkId}` })
+  if (!Number.isInteger(choice) || !check.options[choice]) return res.status(400).json({ error: 'choice is out of range' })
+
+  try {
+    const result = await hintForWrongChoice({ concept, check, choice, learner, misconceptionHistory })
+    res.json(result)
+  } catch (err) {
+    console.error('[check-hint]', err.message)
     res.status(502).json({ error: err.message })
   }
 })

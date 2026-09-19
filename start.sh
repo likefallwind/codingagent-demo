@@ -7,6 +7,7 @@
 #   ./start.sh test     跑单元测试
 #   ./start.sh stop     停掉本脚本启动的残留进程
 #
+# 端口被占时会自动顺延（5173 → 5174 → …），实际用的端口以启动时打印的为准。
 # 它替你处理的都是实际会卡住人的事：缺依赖、缺 API key、端口被占、
 # Node 版本过低、Ctrl+C 之后进程没清干净。
 
@@ -16,6 +17,8 @@ cd "$(dirname "${BASH_SOURCE[0]}")"
 WEB_PORT="${WEB_PORT:-5173}"
 API_PORT="${PORT:-8787}"
 MODE="${1:-dev}"
+RUN_DIR=".run"            # 每个运行中的实例一个文件：.run/<pid>，记端口和进程组，供 stop 使用
+RUN_FILE="$RUN_DIR/$$"
 
 c_red=$'\033[31m'; c_grn=$'\033[32m'; c_yel=$'\033[33m'; c_dim=$'\033[2m'; c_off=$'\033[0m'
 info() { printf '%s\n' "$*"; }
@@ -41,11 +44,31 @@ port_owner() {
 # ---------------------------------------------------------------- stop
 if [ "$MODE" = "stop" ]; then
   stopped=0
-  for port in "$WEB_PORT" "$API_PORT"; do
-    for pid in $(port_owner "$port"); do
-      kill "$pid" 2>/dev/null && { ok "已停止占用 :$port 的进程 (pid $pid)"; stopped=1; }
-    done
+  # 只杀监听端口的进程不够：concurrently、node --watch 这些父进程会活下来
+  # 继续占着终端。所以按记录停掉整个实例——给 start.sh 发 TERM，由它的
+  # cleanup 收掉整个进程组；它若已被 kill -9，就直接杀记录下的进程组。
+  for f in "$RUN_DIR"/*; do
+    [ -f "$f" ] || continue
+    pid="${f##*/}"; PGID=""; WEB_PORT=""; API_PORT=""
+    # shellcheck disable=SC1090
+    . "$f"
+    if ps -p "$pid" -o args= 2>/dev/null | grep -q 'start\.sh'; then
+      kill -TERM "$pid" 2>/dev/null || true
+      for _ in 1 2 3 4 5 6 7 8 9 10; do kill -0 "$pid" 2>/dev/null || break; sleep 0.3; done
+    fi
+    [ -n "$PGID" ] && kill -- -"$PGID" 2>/dev/null || true
+    ok "已停止实例 pid $pid（${WEB_PORT:+前端 :$WEB_PORT，}接口 :$API_PORT）"
+    stopped=1
+    rm -f "$f"
   done
+  # 兜底：没有记录的（比如旧版脚本启动的），按默认端口找占用者。
+  if [ "$stopped" = 0 ]; then
+    for port in "$WEB_PORT" "$API_PORT"; do
+      for pid in $(port_owner "$port"); do
+        kill "$pid" 2>/dev/null && { ok "已停止占用 :$port 的进程 (pid $pid)"; stopped=1; }
+      done
+    done
+  fi
   [ "$stopped" = 0 ] && info "没有找到正在运行的进程。"
   exit 0
 fi
@@ -83,20 +106,41 @@ if [ "$MODE" = "test" ]; then
 fi
 
 # ---------------------------------------------------------------- 端口
-needed=("$API_PORT")
-[ "$MODE" = "dev" ] && needed=("$WEB_PORT" "$API_PORT")
-for port in "${needed[@]}"; do
-  if port_busy "$port"; then
+# 端口被占不再直接退出，而是顺延到下一个空闲端口。提示信息走 stderr，
+# 因为这个函数的 stdout 就是选中的端口号。
+RESERVED=""
+PORT_SCAN_LIMIT=20
+
+find_free_port() {
+  local port="$1" label="$2" tries=0 owner
+  while port_busy "$port" || [[ " $RESERVED " == *" $port "* ]]; do
     owner="$(port_owner "$port")"
-    die "端口 $port 已被占用${owner:+（pid $owner）}。先运行 ./start.sh stop，或换端口：WEB_PORT=3000 PORT=3001 ./start.sh"
-  fi
-done
+    warn "$label 端口 $port 已被占用${owner:+（pid $owner）}，改用 $((port + 1))。" >&2
+    port=$((port + 1))
+    tries=$((tries + 1))
+    [ "$tries" -lt "$PORT_SCAN_LIMIT" ] ||
+      die "从 $1 开始的 $PORT_SCAN_LIMIT 个端口都被占用。先运行 ./start.sh stop，或手动指定：WEB_PORT=3000 PORT=3001 ./start.sh"
+  done
+  printf '%s' "$port"
+}
+
+API_PORT="$(find_free_port "$API_PORT" "接口")"
+RESERVED="$API_PORT"
+if [ "$MODE" = "dev" ]; then
+  WEB_PORT="$(find_free_port "$WEB_PORT" "前端")"
+fi
+
+# 记下实际端口，stop 才知道该杀谁。每个实例一个文件，多开互不覆盖。
+mkdir -p "$RUN_DIR"
+[ "$MODE" = "dev" ] || WEB_PORT=""
+printf 'WEB_PORT=%s\nAPI_PORT=%s\n' "$WEB_PORT" "$API_PORT" > "$RUN_FILE"
 
 # 无论怎么退出，都不留下孤儿进程。
 cleanup() {
   trap - INT TERM EXIT
   [ -n "${CHILD:-}" ] && kill -- -"$CHILD" 2>/dev/null || true
   wait 2>/dev/null || true
+  rm -f "$RUN_FILE"
 }
 trap cleanup INT TERM EXIT
 
@@ -111,8 +155,9 @@ case "$MODE" in
     info ""
     set -m
     PORT="$API_PORT" npx concurrently -n web,api -c cyan,magenta \
-      "npx vite --port $WEB_PORT" "node --watch server/index.js" &
+      "npx vite --port $WEB_PORT --strictPort" "node --watch server/index.js" &
     CHILD=$!
+    echo "PGID=$CHILD" >> "$RUN_FILE"
     wait "$CHILD"
     ;;
 
@@ -128,6 +173,7 @@ case "$MODE" in
     set -m
     PORT="$API_PORT" node server/index.js &
     CHILD=$!
+    echo "PGID=$CHILD" >> "$RUN_FILE"
     wait "$CHILD"
     ;;
 

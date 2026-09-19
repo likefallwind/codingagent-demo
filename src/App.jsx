@@ -59,7 +59,9 @@ export default function App() {
 
   const misconceptionHistory = useMemo(
     () => L.misconceptionsOf(concept.id).map((m) => m.id),
-    [L, concept.id],
+    // Not `L`: that object is new on every render, which would make the tutor's
+    // alert effect restart its request whenever anything re-renders.
+    [L.misconceptionsOf, concept.id],
   )
 
   const learnerState = useMemo(
@@ -86,9 +88,28 @@ export default function App() {
       detail: obs.detail,
     })
     if (!obs.correct && obs.facts?.length) {
-      setAlert({ facts: obs.facts, description: obs.description, at: Date.now() })
+      setAlert({ kind: 'lab', facts: obs.facts, description: obs.description, at: Date.now() })
     }
   }, [L, concept.id])
+
+  /**
+   * A wrong answer to a check. The card has already said "wrong" and lets the
+   * learner retry; the tutor panel says why. `fallback` is authored text shown
+   * if the model is unreachable, so the panel is never silent after a mistake.
+   * It names the suspected belief, never the right option.
+   */
+  const handleWrongAnswer = useCallback((info) => {
+    const check = (concept.checks ?? []).find((c) => c.id === info.checkId)
+    const belief = (concept.misconceptions ?? []).find((m) => check?.misconceptions?.includes(m.id))?.belief
+    const fallback = belief
+      ? `你可能是这样想的：「${belief}」。对照上面的讲解想一想，这个想法哪里站不住。`
+      : '回到上面讲解里的「例子」和「形式化」两部分，对照题目里的条件再看一遍。'
+    setAlert({ kind: 'check', ...info, fallback, at: Date.now() })
+  }, [concept])
+
+  // Stable, so the tutor panel's alert effect does not restart its request on
+  // every unrelated re-render of the app.
+  const clearAlert = useCallback(() => setAlert(null), [])
 
   const openLayer = (layer) => {
     setOpenLayers((o) => ({ ...o, [`${concept.id}:${layer}`]: !o[`${concept.id}:${layer}`] }))
@@ -229,6 +250,7 @@ export default function App() {
               misconceptionHistory={misconceptionHistory}
               onEvidence={handleEvidence}
               onAnswered={() => setPinnedCheckId(activeCheck.id)}
+              onWrong={handleWrongAnswer}
               onContinue={() => setPinnedCheckId(null)} />
           )}
 
@@ -254,7 +276,7 @@ export default function App() {
           learnerState={learnerState}
           misconceptionHistory={misconceptionHistory}
           alert={alert}
-          onAlertHandled={() => setAlert(null)}
+          onAlertHandled={clearAlert}
           attemptsInStep={state.attempts}
           labState={`掌握度 ${Math.round(state.mastery * 100)}%，已尝试 ${state.attempts} 次`} />
       </div>

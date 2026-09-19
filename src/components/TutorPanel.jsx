@@ -14,7 +14,7 @@
  */
 
 import React, { useCallback, useEffect, useRef, useState } from 'react'
-import { askTutor, requestHint, diagnose } from '../api.js'
+import { askTutor, requestHint, diagnose, checkHint } from '../api.js'
 import { Button } from './ui.jsx'
 
 const STATUS = {
@@ -27,6 +27,7 @@ export default function TutorPanel({
   course, concept, learnerState, misconceptionHistory, alert, onAlertHandled, attemptsInStep, labState,
 }) {
   const [mode, setMode] = useState('idle') // idle | hint | ask | alert
+  const [alertKind, setAlertKind] = useState('lab') // lab | check
   const [text, setText] = useState('')
   const [streaming, setStreaming] = useState(false)
   const [error, setError] = useState(null)
@@ -59,22 +60,38 @@ export default function TutorPanel({
   useEffect(() => () => abortRef.current?.abort(), [])
 
   /**
-   * A mistake the deterministic layer detected. This is the only path that opens
-   * the panel without the learner asking.
+   * A mistake the deterministic layer detected — a lab action scored wrong, or a
+   * wrong answer to a check. This is the only path that opens the panel without
+   * the learner asking.
    */
   useEffect(() => {
     if (!alert) return
-    let cancelled = false
-    const ac = new AbortController()
     abortRef.current?.abort()
-    abortRef.current = ac
+    abortRef.current = null
 
     setMode('alert')
-    setText('')
+    setAlertKind(alert.kind ?? 'lab')
     setError(null)
+
+    // A graded written answer already carries the grader's explanation.
+    if (alert.feedback) {
+      setText(alert.feedback)
+      setStreaming(false)
+      onAlertHandled?.()
+      return
+    }
+
+    let cancelled = false
+    const ac = new AbortController()
+    abortRef.current = ac
+    setText('')
     setStreaming(true)
 
-    diagnose({ ...baseBody(), action: { facts: alert.facts, description: alert.description } }, ac.signal)
+    const request = alert.kind === 'check'
+      ? checkHint({ ...baseBody(), checkId: alert.checkId, choice: alert.choice }, ac.signal)
+      : diagnose({ ...baseBody(), action: { facts: alert.facts, description: alert.description } }, ac.signal)
+
+    request
       .then((res) => {
         if (cancelled) return
         setText(res.feedback)
@@ -82,9 +99,11 @@ export default function TutorPanel({
       })
       .catch((err) => {
         if (cancelled || ac.signal.aborted) return
-        // The lab already told the learner they were wrong; failing to explain
-        // why is a degraded experience, not a broken one.
-        setError(err.message)
+        // The main column already told the learner they were wrong; failing to
+        // explain why is a degraded experience, not a broken one. Fall back to
+        // the author's words where there are some.
+        if (alert.fallback) setText(alert.fallback)
+        else setError(err.message)
       })
       .finally(() => { if (!cancelled) setStreaming(false) })
 
@@ -191,7 +210,7 @@ export default function TutorPanel({
                 fontSize: 12, fontWeight: 500,
                 color: mode === 'alert' ? 'var(--warn)' : 'var(--brand)',
               }}>
-                {mode === 'alert' ? '关于你刚才那一步' : mode === 'hint' ? '提示' : '回答'}
+                {mode === 'alert' ? (alertKind === 'check' ? '关于你刚才那道题' : '关于你刚才那一步') : mode === 'hint' ? '提示' : '回答'}
               </span>
               <span style={{ flex: 1 }} />
               {streaming ? (

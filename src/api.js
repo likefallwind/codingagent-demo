@@ -20,6 +20,7 @@ async function postJSON(path, body, signal) {
 
 export const gradeAnswer = (body, signal) => postJSON('/api/tutor/grade', body, signal)
 export const diagnose = (body, signal) => postJSON('/api/tutor/diagnose', body, signal)
+export const checkHint = (body, signal) => postJSON('/api/tutor/check-hint', body, signal)
 
 /**
  * Consume an SSE endpoint, invoking `onDelta` for each text fragment.

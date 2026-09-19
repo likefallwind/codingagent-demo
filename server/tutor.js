@@ -196,6 +196,60 @@ feedback 写 2-3 句、120 字以内，中文不夹英文，直接对学生说�
 }
 
 /**
+ * A nudge after a wrong multiple-choice pick.
+ *
+ * The learner is about to choose again, so the one thing this must not do is
+ * name the right option — that would turn the retry into copying. The model is
+ * told which option is correct so it can aim the hint, and the validator rejects
+ * any reply that repeats the correct option's text.
+ */
+export async function hintForWrongChoice({ concept, check, choice, learner, misconceptionHistory, signal }) {
+  const picked = check.options[choice]
+  const right = check.options.find((o) => o.correct)
+  const system = `你是一位助教。学生在一道关于「${concept.title}」的选择题上选错了，马上要再选一次。
+
+${contextBlock({ concept, learner, misconceptionHistory })}
+
+题目：${check.prompt}
+选项：
+${check.options.map((o, i) => `${String.fromCharCode(65 + i)}. ${o.text}`).join('\n')}
+
+学生选了：${picked.text}
+正确答案（只给你看，绝对不能告诉学生，也不能暗示是哪个字母）：${right.text}
+
+本概念登记在案的误解：
+${misconceptionMenu(concept)}
+
+本节可引用的事实：
+${citableFacts(concept)}
+
+你的任务：说清楚学生选的这个选项为什么站不住，再给一个能帮他自己想出正确答案的线索。
+- 不要说出正确选项的内容，不要说「应该选某某」。
+- 2-3 句、100 字以内，中文不夹英文，直接对学生说，不要开场白。`
+
+  return chatJSON(
+    [{ role: 'system', content: system }, { role: 'user', content: '请给提示。' }],
+    {
+      schemaHint: `{ "feedback": "直接说给学生听的提示，中文，2-3 句" }`,
+      model: MODELS.interactive,
+      maxTokens: 2000,
+      temperature: 0.3,
+      signal,
+      validate: (v) => {
+        if (typeof v.feedback !== 'string' || v.feedback.trim().length < 10) return 'feedback 太短或缺失'
+        if (v.feedback.trim().length > 160) return `feedback 太长（${v.feedback.trim().length} 字），压到 100 字以内`
+        // "0.500——…" style options: the part before the dash is the answer itself.
+        const key = right.text.split('——')[0].trim()
+        if (key && v.feedback.includes(key)) return `feedback 泄露了正确答案「${key}」，只给线索，不要说出答案`
+        const figures = checkQuantities(v.feedback, allowedFigureSource(concept))
+        if (figures) return figures
+        return null
+      },
+    },
+  )
+}
+
+/**
  * Answer a learner's own question, streamed.
  *
  * Given the concept and the learner's state so the answer can be pitched at them
