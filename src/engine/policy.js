@@ -10,20 +10,13 @@
 
 import { topoOrder } from './schema.js'
 import {
-  conceptStatus, activeMisconceptions, MASTERY_THRESHOLD, STRUGGLING_THRESHOLD,
+  conceptStatus, activeMisconceptions, openChecks, MASTERY_THRESHOLD, STRUGGLING_THRESHOLD,
 } from './learnerModel.js'
+
+export { openChecks }
 
 /** Explanation layers, in the order a struggling learner falls back through. */
 export const LAYERS = ['intuition', 'example', 'formal']
-
-/** Checks the learner has not yet answered correctly, in course order. */
-export function openChecks(learner, concept) {
-  const state = learner.concepts[concept.id]
-  const passed = new Set(
-    (state?.evidence ?? []).filter((e) => e.correct && e.detail?.checkId).map((e) => e.detail.checkId),
-  )
-  return (concept.checks ?? []).filter((c) => !passed.has(c.id))
-}
 
 /**
  * The check to re-ask once every check has been passed but mastery is still short.
@@ -52,9 +45,21 @@ export function reviewCheck(learner, concept) {
   return checks.reduce((a, b) => (lastSeen(b.id) < lastSeen(a.id) ? b : a))
 }
 
-/** True once the learner has made at least one real attempt in the concept's lab. */
+/** True once the learner has done anything in the concept's lab — a judgement or an exploration. */
 export function labAttempted(learner, conceptId) {
-  return (learner.concepts[conceptId]?.evidence ?? []).some((e) => e.kind === 'labAction')
+  return (learner.concepts[conceptId]?.evidence ?? []).some((e) => e.kind === 'labAction' || e.kind === 'labExplore')
+}
+
+/**
+ * Seed for the next generated practice question.
+ *
+ * Counting practice evidence makes the seed deterministic — the same history
+ * always yields the same next question, so the page, the server that grades a
+ * hint for it, and a test can all regenerate it independently — while every
+ * answer moves on to a question the learner has not seen.
+ */
+export function practiceSeed(learner, conceptId) {
+  return (learner.concepts[conceptId]?.evidence ?? []).filter((e) => e.detail?.practice).length
 }
 
 /** The next concept that is unlocked and not yet mastered, in prerequisite order. */
@@ -113,7 +118,7 @@ export function nextAction(learner, course) {
     const detail = concept.misconceptions.find((x) => x.id === m.id)
     return {
       type: 'remediate', conceptId: concept.id, misconceptionId: m.id, misconception: detail,
-      why: '你的回答显示出一个具体的误解，先把它纠正过来。',
+      why: '刚才那一步暴露出一个具体的误解，先把它纠正过来。',
     }
   }
 
@@ -122,7 +127,7 @@ export function nextAction(learner, course) {
   const recent = (state.evidence ?? []).slice(-3)
   const strugglingRun = recent.length >= 2 && recent.every((e) => !e.correct)
   if (state.mastery < STRUGGLING_THRESHOLD && strugglingRun) {
-    const tried = new Set((state.evidence ?? []).map((e) => e.detail?.layer).filter(Boolean))
+    const tried = new Set(state.layersSeen ?? [])
     const layer = LAYERS.find((l) => !tried.has(l)) ?? 'example'
     return {
       type: 'explain', conceptId: concept.id, layer, scaffold: true,
@@ -144,12 +149,25 @@ export function nextAction(learner, course) {
       type: 'check', conceptId: concept.id, check: open[0],
       why: state.attempts === 0
         ? `检验一下「${concept.title}」是否真的理解了。`
-        : `掌握度 ${Math.round(state.mastery * 100)}%，再确认一次就能通过。`,
+        : state.mastery >= MASTERY_THRESHOLD
+          ? `掌握度够了，还有 ${open.length} 道题没做对过，做完就解锁下一步。`
+          : `掌握度 ${Math.round(state.mastery * 100)}%，再确认一次就能通过。`,
     }
   }
 
-  // Checks exhausted but mastery still short — re-ask one, since a check can
-  // always produce fresh evidence and a solved lab may not.
+  // Checks exhausted but mastery still short. A fresh generated question beats
+  // re-asking one whose answer the learner has already been shown: the second
+  // measures memory of the feedback, not understanding.
+  if (concept.practice) {
+    return {
+      type: 'practice', conceptId: concept.id, practice: concept.practice,
+      seed: practiceSeed(learner, concept.id),
+      why: `题目都做过了，但掌握度 ${Math.round(state.mastery * 100)}% 还没到 ${Math.round(MASTERY_THRESHOLD * 100)}%，换一道新题再练一次。`,
+    }
+  }
+
+  // No generator for this concept — re-ask one, since a check can always
+  // produce fresh evidence and a solved lab may not.
   const review = reviewCheck(learner, concept)
   if (review) {
     return {

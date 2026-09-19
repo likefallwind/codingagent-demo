@@ -5,7 +5,8 @@
 #   ./start.sh          开发模式：Vite :5173 + API :8787，改代码自动重载
 #   ./start.sh prod     生产模式：先构建，再由单个进程托管（:8787）
 #   ./start.sh test     跑单元测试
-#   ./start.sh stop     停掉本脚本启动的残留进程
+#   ./start.sh e2e      在真浏览器里把整门课走两遍（需要 API key，约 15 分钟）
+#   ./start.sh stop     停掉本项目开着的全部进程（不限于本脚本启动的）
 #
 # 端口被占时会自动顺延（5173 → 5174 → …），实际用的端口以启动时打印的为准。
 # 它替你处理的都是实际会卡住人的事：缺依赖、缺 API key、端口被占、
@@ -17,7 +18,7 @@ cd "$(dirname "${BASH_SOURCE[0]}")"
 WEB_PORT="${WEB_PORT:-5173}"
 API_PORT="${PORT:-8787}"
 MODE="${1:-dev}"
-RUN_DIR=".run"            # 每个运行中的实例一个文件：.run/<pid>，记端口和进程组，供 stop 使用
+RUN_DIR=".run"            # 每个运行中的实例一个文件：.run/<pid>，记端口，供 stop 报告用
 RUN_FILE="$RUN_DIR/$$"
 
 c_red=$'\033[31m'; c_grn=$'\033[32m'; c_yel=$'\033[33m'; c_dim=$'\033[2m'; c_off=$'\033[0m'
@@ -41,35 +42,93 @@ port_owner() {
   { command -v fuser >/dev/null && fuser "$1"/tcp 2>/dev/null | tr -d ' '; } || true
 }
 
+# 进程 $1 的工作目录：Linux 读 /proc，macOS 没有 /proc，退回 lsof。
+proc_cwd() {
+  if [ -d /proc/"$1" ]; then readlink /proc/"$1"/cwd 2>/dev/null
+  else lsof -a -p "$1" -d cwd -Fn 2>/dev/null | sed -n 's/^n//p'; fi
+}
+
 # ---------------------------------------------------------------- stop
+# 停掉本项目开着的全部进程，不管是怎么起的：./start.sh（前台、后台、开了几个、
+# 端口顺延到哪）、npm run dev、手敲的 node server/index.js、旧版脚本留下的……
+# 不靠记录，直接扫进程表。认领规则：工作目录在本项目内，且命令行是下面几种
+# 之一；命中后连同它的整棵子进程树一起停。同目录下的编辑器、终端 shell、
+# 运行 stop 的这串祖先进程都对不上，不会被误伤。
+# start.sh 必须是 shell 直接执行的脚本参数；`bash -c "…start.sh…"` 这种
+# 包装命令串不算，否则会连带停掉包装它的 shell 和它的其他子进程。
+OURS='^([^ ]*/)?(ba|z|da)?sh( -[^c ][^ ]*)* ([^ ]*/)?start\.sh( |$)'
+OURS+='|^[^ ]*npm (run|exec|start)( |$)'
+OURS+='|node_modules/\.bin/(concurrently|vite)( |$)|vite/bin/vite\.js'
+OURS+='|^[^ ]*node .*server/index\.js'
+
 if [ "$MODE" = "stop" ]; then
-  stopped=0
-  # 只杀监听端口的进程不够：concurrently、node --watch 这些父进程会活下来
-  # 继续占着终端。所以按记录停掉整个实例——给 start.sh 发 TERM，由它的
-  # cleanup 收掉整个进程组；它若已被 kill -9，就直接杀记录下的进程组。
-  for f in "$RUN_DIR"/*; do
-    [ -f "$f" ] || continue
-    pid="${f##*/}"; PGID=""; WEB_PORT=""; API_PORT=""
-    # shellcheck disable=SC1090
-    . "$f"
-    if ps -p "$pid" -o args= 2>/dev/null | grep -q 'start\.sh'; then
-      kill -TERM "$pid" 2>/dev/null || true
-      for _ in 1 2 3 4 5 6 7 8 9 10; do kill -0 "$pid" 2>/dev/null || break; sleep 0.3; done
-    fi
-    [ -n "$PGID" ] && kill -- -"$PGID" 2>/dev/null || true
-    ok "已停止实例 pid $pid（${WEB_PORT:+前端 :$WEB_PORT，}接口 :$API_PORT）"
-    stopped=1
-    rm -f "$f"
+  root="$(pwd -P)"
+  table="$(ps -Ao pid=,ppid=,args=)"
+
+  claimed=""
+  for pid in $(printf '%s\n' "$table" | OURS="$OURS" awk '
+      { pid = $1; $1 = $2 = ""; sub(/^ +/, ""); if ($0 ~ ENVIRON["OURS"]) print pid }'); do
+    cwd="$(proc_cwd "$pid" || true)"
+    case "$cwd" in "$root"|"$root"/*) claimed="$claimed $pid" ;; esac
   done
-  # 兜底：没有记录的（比如旧版脚本启动的），按默认端口找占用者。
-  if [ "$stopped" = 0 ]; then
-    for port in "$WEB_PORT" "$API_PORT"; do
-      for pid in $(port_owner "$port"); do
-        kill "$pid" 2>/dev/null && { ok "已停止占用 :$port 的进程 (pid $pid)"; stopped=1; }
-      done
-    done
+
+  # 每行：pid <TAB> 是否为树顶 <TAB> 命令行
+  targets="$(printf '%s\n' "$table" | awk -v claimed="$claimed" -v self="$$" '
+    { pid = $1; parent[pid] = $2; kids[$2] = kids[$2] " " pid
+      $1 = $2 = ""; sub(/^ +/, ""); cmd[pid] = $0 }
+    function take(p, set,   k, n, i) {
+      set[p] = 1
+      n = split(kids[p], k, " ")
+      for (i = 1; i <= n; i++) if (!(k[i] in set)) take(k[i], set)
+    }
+    END {
+      take(self, spare)
+      for (p = self; p in parent; ) { p = parent[p]; if (p in spare) break; spare[p] = 1 }
+      n = split(claimed, c, " ")
+      for (i = 1; i <= n; i++) take(c[i], hit)
+      for (p in hit) if (!(p in spare)) printf "%s\t%d\t%s\n", p, !(parent[p] in hit), cmd[p]
+    }')"
+
+  if [ -z "$targets" ]; then
+    rm -f "$RUN_DIR"/*
+    info "没有找到正在运行的进程。"
+    exit 0
   fi
-  [ "$stopped" = 0 ] && info "没有找到正在运行的进程。"
+
+  # 端口记录要在停之前读：start.sh 收到 TERM 后会自己删掉它。
+  report=""
+  while IFS=$'\t' read -r pid top cmd; do
+    [ "$top" = 1 ] || continue
+    ports=""
+    if [ -f "$RUN_DIR/$pid" ]; then
+      WEB_PORT=""; API_PORT=""
+      # shellcheck disable=SC1090
+      . "$RUN_DIR/$pid"
+      ports="（${WEB_PORT:+前端 :$WEB_PORT，}接口 :$API_PORT）"
+    fi
+    [ "${#cmd}" -le 70 ] || cmd="${cmd:0:67}..."
+    report+="pid $pid  $cmd$ports"$'\n'
+  done <<< "$targets"
+
+  # 先 TERM，让 start.sh 的 cleanup 和 node --watch 体面退出；3 秒后还在的
+  # （比如被 Ctrl+Z 挂起、收不到 TERM 的）直接 KILL。
+  pids="$(printf '%s\n' "$targets" | cut -f1 | tr '\n' ' ')"
+  # shellcheck disable=SC2086
+  kill -TERM $pids 2>/dev/null || true
+  alive="$pids"
+  for _ in 1 2 3 4 5 6 7 8 9 10; do
+    still=""
+    for p in $alive; do kill -0 "$p" 2>/dev/null && still="$still $p"; done
+    alive="$still"
+    [ -n "$alive" ] || break
+    sleep 0.3
+  done
+  # shellcheck disable=SC2086
+  [ -z "$alive" ] || kill -KILL $alive 2>/dev/null || true
+
+  while IFS= read -r line; do [ -n "$line" ] && ok "已停止 $line"; done <<< "$report"
+  info "${c_dim}共 $(wc -w <<< "$pids" | tr -d ' ') 个进程${c_off}"
+  rm -f "$RUN_DIR"/*
   exit 0
 fi
 
@@ -105,6 +164,13 @@ if [ "$MODE" = "test" ]; then
   exec npm test
 fi
 
+# ---------------------------------------------------------------- e2e
+# 自己构建、自己找空闲端口起服务，跑完自己关，不碰开着的开发实例。
+if [ "$MODE" = "e2e" ]; then
+  [ -n "${MINIMAX_API_KEY:-}" ] || die "e2e 要和真实的 AI 老师对话，需要 MINIMAX_API_KEY。"
+  exec npm run e2e
+fi
+
 # ---------------------------------------------------------------- 端口
 # 端口被占不再直接退出，而是顺延到下一个空闲端口。提示信息走 stderr，
 # 因为这个函数的 stdout 就是选中的端口号。
@@ -130,7 +196,7 @@ if [ "$MODE" = "dev" ]; then
   WEB_PORT="$(find_free_port "$WEB_PORT" "前端")"
 fi
 
-# 记下实际端口，stop 才知道该杀谁。每个实例一个文件，多开互不覆盖。
+# 记下实际端口，stop 时报告用。每个实例一个文件，多开互不覆盖。
 mkdir -p "$RUN_DIR"
 [ "$MODE" = "dev" ] || WEB_PORT=""
 printf 'WEB_PORT=%s\nAPI_PORT=%s\n' "$WEB_PORT" "$API_PORT" > "$RUN_FILE"
@@ -157,7 +223,6 @@ case "$MODE" in
     PORT="$API_PORT" npx concurrently -n web,api -c cyan,magenta \
       "npx vite --port $WEB_PORT --strictPort" "node --watch server/index.js" &
     CHILD=$!
-    echo "PGID=$CHILD" >> "$RUN_FILE"
     wait "$CHILD"
     ;;
 
@@ -173,11 +238,10 @@ case "$MODE" in
     set -m
     PORT="$API_PORT" node server/index.js &
     CHILD=$!
-    echo "PGID=$CHILD" >> "$RUN_FILE"
     wait "$CHILD"
     ;;
 
   *)
-    die "未知模式：$MODE（可用：dev / prod / test / stop）"
+    die "未知模式：$MODE（可用：dev / prod / test / e2e / stop）"
     ;;
 esac

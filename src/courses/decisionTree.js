@@ -1,27 +1,37 @@
 /**
  * The decision-tree course.
  *
- * Pure data — no functions, no imports — so it is JSON in everything but syntax.
- * A `.js` file only so it can carry comments. This is the whole of what makes
- * the platform teach decision trees; the engine reads it and never knows what
+ * Pure data — no functions — so it is JSON in everything but syntax. A `.js`
+ * file only so it can carry comments. This is the whole of what makes the
+ * platform teach decision trees; the engine reads it and never knows what
  * subject it is delivering.
  *
- * Every number quoted in this text is computed in test/cart.test.js against the
- * real dataset. If the data or the algorithm changes, those tests fail and this
- * prose has to be revised with them — content that claims numbers must be
- * pinned to the numbers.
+ * Two chapters. The main line follows one tree through its life on a fruit
+ * dataset (CART: binary cuts, gini). The advanced chapter switches to the
+ * play-tennis table and a different algorithm family (ID3 / C4.5: multi-way
+ * splits, entropy) to show where impurity scores stop measuring learning. The
+ * two chapters run on different lab components and different algorithm code
+ * through the same engine.
+ *
+ * Every number quoted in this text is computed in test/cart.test.js,
+ * test/algo.test.js and test/course.test.js against the real data. If the data
+ * or the algorithm changes, those tests fail and this prose has to be revised
+ * with them — content that claims numbers must be pinned to the numbers.
  */
+
+const MAIN = '主线：一棵树的一生'
+const TRAP = '进阶：多值特征的陷阱'
 
 export const decisionTreeCourse = {
   id: 'decision-tree',
   title: '决策树：从分裂到剪枝',
-  subtitle: '用 16 个水果样本，走完一棵树的一生',
-  lab: 'fruitTree',
-
+  subtitle: '用水果和打网球的数据，走完一棵树的一生，再看它会在哪里骗你',
   concepts: [
     // ---------------------------------------------------------------- 1
     {
       id: 'read-tree',
+      chapter: MAIN,
+      practice: { type: 'leaf-route' },
       /** Questions learners actually ask here — offered by the tutor panel. */
       suggestions: [
         '为什么树要问「是 / 否」而不是直接算？',
@@ -80,6 +90,8 @@ export const decisionTreeCourse = {
     // ---------------------------------------------------------------- 2
     {
       id: 'purity',
+      chapter: MAIN,
+      practice: { type: 'gini-value' },
       /** Questions learners actually ask here — offered by the tutor panel. */
       suggestions: [
         '基尼不纯度和信息熵有什么区别？',
@@ -137,12 +149,11 @@ export const decisionTreeCourse = {
           prompt: '重量有 15 个候选阈值，果皮只有 2 个。这说明什么？',
           options: [
             { text: '什么也说明不了，要比的是各自最好的那一刀', correct: true },
-            { text: '重量更好，因为可选的切法更多' },
+            { text: '重量更好，因为可选的切法更多', misconception: 'more_thresholds_better' },
             { text: '果皮更好，因为更简单' },
             { text: '两者增益一定相等' },
           ],
           explain: '重量最好的一刀增益 0.227，果皮 0.389。候选多少和最终增益没有直接关系。',
-          misconceptions: ['more_thresholds_better'],
         },
         {
           id: 'pu-3',
@@ -158,6 +169,8 @@ export const decisionTreeCourse = {
     // ---------------------------------------------------------------- 3
     {
       id: 'greedy',
+      chapter: MAIN,
+      practice: { type: 'first-cut' },
       /** Questions learners actually ask here — offered by the tutor panel. */
       suggestions: [
         '决策树为什么是贪心算法？',
@@ -216,6 +229,8 @@ export const decisionTreeCourse = {
     // ---------------------------------------------------------------- 4
     {
       id: 'depth-cost',
+      chapter: MAIN,
+      practice: { type: 'depth-read' },
       /** Questions learners actually ask here — offered by the tutor panel. */
       suggestions: [
         '深度和叶子数是什么关系？',
@@ -274,6 +289,8 @@ export const decisionTreeCourse = {
     // ---------------------------------------------------------------- 5
     {
       id: 'overfitting',
+      chapter: MAIN,
+      practice: { type: 'pick-depth' },
       /** Questions learners actually ask here — offered by the tutor panel. */
       suggestions: [
         '为什么训练误差一直在降？',
@@ -319,12 +336,11 @@ export const decisionTreeCourse = {
           prompt: '训练误差随深度单调下降。这件事告诉了我们什么？',
           options: [
             { text: '几乎什么也没告诉我们——它是算法的数学性质，对选深度没有信息量', correct: true },
-            { text: '说明模型在稳定变好' },
+            { text: '说明模型在稳定变好', misconception: 'train_error_measures_quality' },
             { text: '说明数据质量很高' },
-            { text: '说明还应该再加深' },
+            { text: '说明还应该再加深', misconception: 'train_error_measures_quality' },
           ],
           explain: '一个恒定给出同样答案的指标，无法用来在选项之间做区分。',
-          misconceptions: ['train_error_measures_quality'],
         },
         {
           id: 'of-2',
@@ -340,6 +356,8 @@ export const decisionTreeCourse = {
     // ---------------------------------------------------------------- 6
     {
       id: 'pruning',
+      chapter: MAIN,
+      practice: { type: 'pick-setting' },
       /** Questions learners actually ask here — offered by the tutor panel. */
       suggestions: [
         '预剪枝和后剪枝该用哪个？',
@@ -394,9 +412,249 @@ export const decisionTreeCourse = {
         },
       ],
     },
+
+    // ---------------------------------------------------------------- 7
+    {
+      id: 'instability',
+      chapter: MAIN,
+      suggestions: [
+        '为什么根节点反而最稳？',
+        '那到底该相信哪一棵树？',
+        '随机森林是怎么利用这一点的？',
+      ],
+      title: '换一批数据，就换一棵树',
+      shortTitle: '树的不稳定',
+      prerequisites: ['pruning'],
+      objectives: [
+        '观察同一个果园的不同批次数据会长出多不一样的树',
+        '解释为什么越深的树越不稳定，以及投票为什么能缓解',
+      ],
+      explain: {
+        intuition:
+          '前面每一步用的都是同一批 240 个水果。如果果园再摘一批，用同样的算法、同样的设置，长出来的树会一样吗？根节点多半一样，越往下越不一样——决策树对训练数据里的偶然波动非常敏感。',
+        example:
+          '同一个果园摘了 8 批、每批 240 个水果，各建一棵 depth 8 的树。根节点 8 次都是「果皮 = 薄」，第二刀的阈值在 183 g 到 189 g 之间晃，再往下就各长各的：叶子数从 27 到 42 都有。拿 600 个新水果去问这些树，depth 2 时任意两棵平均只在 1.2% 的水果上意见不同，depth 8 时是 13.0%。',
+        formal:
+          '这叫高方差：模型随训练数据的偶然波动大幅变化。越深的节点样本越少，一两个样本就能改变哪一刀胜出，而这个改变会传给它下面的整棵子树。降低方差有两条路：剪枝，降低模型容量；或者训练很多棵树再投票——这 8 棵 depth 8 的树投票，验证误差是 10.0%，单棵平均是 12.7%。这正是随机森林的出发点。',
+      },
+      lab: { type: 'instability-explorer', config: {} },
+      misconceptions: [
+        {
+          id: 'deterministic_means_stable',
+          belief: '算法是确定的，所以同一个问题总会得到同一棵树',
+          cue: '学生认为换一批数据树的结构不会变，或把「算法确定」理解成「结果稳定」',
+          correction:
+            '对同一份数据，算法每次都给出同一棵树；但它对数据本身非常敏感。8 批数据里根节点都是「果皮 = 薄」，可 depth 8 的叶子数从 27 到 42 都有，任意两棵平均在 13.0% 的新水果上判得不一样。',
+        },
+      ],
+      checks: [
+        {
+          id: 'in-1',
+          kind: 'mcq',
+          prompt: '同一个果园又摘了一批 240 个水果，用完全相同的设置重新建一棵 depth 8 的树。最可能出现什么？',
+          options: [
+            { text: '根节点那一刀不变，越往下差别越大', correct: true },
+            { text: '和原来那棵完全一样——算法是确定的', misconception: 'deterministic_means_stable' },
+            { text: '从根节点开始就完全不同' },
+            { text: '结构不变，只是叶子里的样本数变了', misconception: 'deterministic_means_stable' },
+          ],
+          explain: '8 批数据里根节点每次都是「果皮 = 薄」，而 depth 8 的叶子数从 27 到 42 都有。',
+        },
+        {
+          id: 'in-2',
+          kind: 'freeResponse',
+          prompt: '为什么越深的树，换一批数据之后变化越大？',
+          rubric:
+            '要点：深处的节点只剩很少的样本，几个样本的偶然波动就能改变哪一刀胜出；上面一刀的改变还会传给下面整棵子树。说出「深处样本少」「偶然波动 / 噪声」「改变会往下传」「方差大」中任一机制即算正确。只说「因为更复杂」「因为过拟合」而没有机制，算部分正确。认为树根本不会变，命中 deterministic_means_stable。',
+          misconceptions: ['deterministic_means_stable'],
+        },
+        {
+          id: 'in-3',
+          kind: 'mcq',
+          prompt: '让 8 棵在不同批次上训练的 depth 8 的树投票，验证误差是 10.0%，而单棵平均是 12.7%。投票为什么更好？',
+          options: [
+            { text: '各棵树犯的错不完全一样，多数票能把偶然的错误互相抵消', correct: true },
+            { text: '投票让每棵树都变浅了' },
+            { text: '其中一棵树恰好特别准，投票把它挑了出来' },
+            { text: '纯属巧合，换一个验证集就不成立' },
+          ],
+          explain: '每棵树都在各自那批数据的偶然波动上犯错，这些错误彼此不重合，多数票就把它们冲掉了。这是随机森林的核心想法。',
+        },
+      ],
+    },
+
+    // ---------------------------------------------------------------- 8
+    {
+      id: 'entropy-gain',
+      chapter: TRAP,
+      practice: { type: 'entropy-value' },
+      title: '另一把尺子：熵与信息增益',
+      shortTitle: '熵与信息增益',
+      prerequisites: ['purity'],
+      objectives: ['用熵衡量一个集合的混乱程度', '用信息增益比较不同特征的分裂能力'],
+      suggestions: [
+        '熵和基尼不纯度该用哪个？',
+        '为什么用 log₂ 而不是自然对数？',
+        '信息增益一定是非负的吗？',
+      ],
+      explain: {
+        intuition:
+          '主线用的是基尼和二叉切分（CART）。决策树的另一派——ID3——用熵来量「混乱」，而且一个特征有几个取值就开几个分支。熵衡量「你对结果有多不确定」：14 天里 9 天打球、5 天不打，熵是 0.940 bit，接近最混乱。一个好特征能让你在知道它之后，不确定性大幅下降。',
+        example:
+          '按天气分裂：阴天 4 天全打球（熵 0），晴天 5 天、雨天 5 天各自还混着。加权后剩 0.694，信息增益 0.247，是四个真实特征里最高的。湿度 0.152，风力 0.048，气温只有 0.029。',
+        formal:
+          'H(S) = −Σ p(c)·log₂p(c)。特征 A 的信息增益 Gain(S,A) = H(S) − Σ (|Sv|/|S|)·H(Sv)。ID3 在每个节点取信息增益最大的特征，对每个取值开一个分支。',
+      },
+      lab: { type: 'entropy-explorer', config: { dataset: 'play-tennis' } },
+      misconceptions: [
+        {
+          id: 'entropy_is_error',
+          belief: '熵就是错误率的另一种说法',
+          cue: '学生把熵和分类错误率混为一谈',
+          correction:
+            '熵衡量分布的不确定性，不是任何分类器的表现。9 打 / 5 不打这个集合熵是 0.940，而「全猜打球」的错误率是 5/14 ≈ 0.357。两者是不同的量，只是都在集合变纯时趋于 0。',
+        },
+      ],
+      checks: [
+        {
+          id: 'eg-1',
+          kind: 'mcq',
+          prompt: '一个集合里两个类别各占一半，它的熵是多少？',
+          options: [
+            { text: '1 bit', correct: true },
+            { text: '0.5 bit', misconception: 'entropy_is_error' },
+            { text: '0 bit' },
+            { text: '2 bit' },
+          ],
+          explain: '−0.5·log₂0.5 − 0.5·log₂0.5 = 1。二分类下熵的最大值就是 1 bit。0.5 是这时的错误率，也是基尼的最大值，但不是熵。',
+        },
+        {
+          id: 'eg-2',
+          kind: 'freeResponse',
+          prompt: '「阴天」那 4 天全都打球。这个分支的熵是多少？为什么？',
+          rubric:
+            '要点：熵为 0，因为集合是纯的——只有一个类别，没有不确定性。命中「0」且给出「纯 / 只有一类 / 没有不确定性」的理由即算正确。只答 0 没有理由算部分正确。',
+        },
+      ],
+    },
+
+    // ---------------------------------------------------------------- 9
+    {
+      id: 'many-values',
+      chapter: TRAP,
+      practice: { type: 'id-gain' },
+      title: '一列行号能骗过信息增益',
+      shortTitle: '多值陷阱',
+      prerequisites: ['entropy-gain'],
+      objectives: ['解释为什么取值越多的特征信息增益越高', '识别出标识符型特征'],
+      suggestions: [
+        '为什么分支越多增益越大？',
+        '现实数据里哪些列是这种陷阱？',
+        '把 Day 删掉是不是就没事了？',
+      ],
+      explain: {
+        intuition:
+          '把 Day 这一列（D1 到 D14，每天一个编号）当成特征喂进去。它会把 14 个样本切成 14 个单样本分支，每支都纯。信息增益因此等于整个数据集的熵——0.940，可能达到的最大值。ID3 会毫不犹豫地选它。',
+        example:
+          '结果是一棵只有一层、14 个叶子的树，训练集上 100% 正确。可第 15 天来了，它找不到 D15 这个分支，只能退回全体的多数——判「打」。而且不管第 15 天是晴是雨、风大风小，它都判「打」：它根本不看天气。相比之下真正有用的天气，增益只有 0.247。',
+        formal:
+          '信息增益对分支数存在系统性偏好：分得越细，各子集越可能纯，加权熵越低。极限情况下每个样本自成一支，加权熵为 0，增益达到 H(S)。这个偏好与特征的预测价值无关。',
+      },
+      lab: { type: 'id-trap-explorer', config: { dataset: 'play-tennis' } },
+      misconceptions: [
+        {
+          id: 'more_values_better',
+          belief: '取值多的特征信息量更大，所以更好',
+          cue: '学生用取值数量或分支数来论证特征质量',
+          correction:
+            'Day 有 14 个取值、增益 0.940，是所有特征里最高的，但它对预测新的一天毫无价值。增益高只说明它在这批数据上分得干净，不说明它学到了任何规律。',
+        },
+      ],
+      checks: [
+        {
+          id: 'mv-1',
+          kind: 'mcq',
+          prompt: 'Day 这一列的信息增益，为什么正好等于数据集的初始熵 0.940？',
+          options: [
+            { text: '因为它把每个样本单独分成一支，每支都纯，分裂后加权熵为 0', correct: true },
+            { text: '因为它和目标变量完全相关', misconception: 'more_values_better' },
+            { text: '因为它的取值是有序的' },
+            { text: '巧合' },
+          ],
+          explain: '增益 = 初始熵 − 分裂后加权熵。分裂后加权熵为 0 时，增益就等于初始熵，这是上限。',
+        },
+        {
+          id: 'mv-2',
+          kind: 'freeResponse',
+          prompt: '用 Day 建出来的树在 14 个训练样本上 100% 正确。为什么它仍然是一棵毫无价值的树？',
+          rubric:
+            '要点：它只是记住了每一行，对没见过的新样本（新的 Day 编号）无法给出任何有依据的预测，没有学到可泛化的规律。命中「记忆 / 泛化 / 新样本没见过这个编号 / 不看天气」任一即算正确。只说「过拟合」而没解释机制，算部分正确。',
+          misconceptions: ['more_values_better'],
+        },
+      ],
+    },
+
+    // ---------------------------------------------------------------- 10
+    {
+      id: 'gain-ratio-limits',
+      chapter: TRAP,
+      practice: { type: 'split-info' },
+      title: '增益率救不了这一局',
+      shortTitle: '增益率的边界',
+      prerequisites: ['many-values'],
+      objectives: [
+        '用增益率对信息增益做归一化',
+        '说明为什么增益率在这个数据集上仍然选中 Day，以及什么才挡得住它',
+      ],
+      suggestions: [
+        '那增益率到底有没有用？',
+        'C4.5 实际是怎么处理这个问题的？',
+        '随机森林会不会也被骗？',
+      ],
+      explain: {
+        intuition:
+          '既然问题出在分支太多，就除以一个衡量分支数的量。Split Info 是分支大小分布本身的熵：Day 的 14 个单样本分支，Split Info 是 log₂14 = 3.807，很大。用增益除以它，得到增益率。',
+        example:
+          '但算完之后：Day 的增益率是 0.2470，天气只有 0.1564。Day 还是赢。教科书上「增益率解决了多值偏好」这句话，在这个数据集上直接不成立。C4.5 的官方启发式——先筛掉增益低于平均的特征，再比增益率——也救不了：Day 的增益太大，把平均值抬到了 0.2832，高过所有真实特征，反而让它成了唯一候选。',
+        formal:
+          'GainRatio(S,A) = Gain(S,A) / SplitInfo(S,A)，其中 SplitInfo(S,A) = −Σ (|Sv|/|S|)·log₂(|Sv|/|S|)。归一化削弱了标识符的优势，但没有消除它。真正可靠的防御是结构性的：要求每个分支平均至少有 2 个样本，Day（平均 1 个）直接出局，天气以增益率 0.1564 胜出。但门槛也不能乱定——超过 4.67，天气自己也会被挡在门外。',
+      },
+      lab: { type: 'gain-ratio-explorer', config: { dataset: 'play-tennis' } },
+      misconceptions: [
+        {
+          id: 'gain_ratio_fixes_bias',
+          belief: '增益率解决了多值特征偏好的问题',
+          cue: '学生认为换成增益率或 C4.5 就不会选中 Day 了',
+          correction:
+            '在这个数据集上不成立：Day 的增益率 0.2470 仍然高于天气的 0.1564。C4.5 的平均增益筛选同样失效。增益率缩小了差距，但没有翻盘。',
+        },
+      ],
+      checks: [
+        {
+          id: 'grl-1',
+          kind: 'mcq',
+          prompt: '按增益率排序，Day（0.2470）和天气（0.1564）谁排前面？',
+          options: [
+            { text: 'Day 仍然排第一——增益率没能挡住它', correct: true },
+            { text: '天气排第一，增益率修正了偏好', misconception: 'gain_ratio_fixes_bias' },
+            { text: '两者相等' },
+            { text: '增益率对 Day 无法计算' },
+          ],
+          explain: '这正是这一节的要点：常见的一句话总结在这个数据集上是错的。',
+        },
+        {
+          id: 'grl-2',
+          kind: 'freeResponse',
+          prompt: '既然增益率和 C4.5 的启发式都挡不住 Day，什么才挡得住？',
+          rubric:
+            '要点：结构性判断——检测并拒绝那些分支几乎全是单样本的特征（标识符），或在预处理阶段就不把行号这类列当作特征。命中「按分支大小/单例比例判断」「不把标识符当特征」「最小叶子样本数」任一即算正确。只说「人工检查」算部分正确。',
+          misconceptions: ['gain_ratio_fixes_bias'],
+        },
+      ],
+    },
   ],
 
   /** Shown after every concept is mastered. */
   conclusion:
-    '验证集是唯一能告诉你「该停在哪里」的东西。训练误差永远支持你把树建得更深——它对这个问题没有信息量。',
+    '验证集是唯一能告诉你「该停在哪里」的东西，训练误差永远支持你把树建得更深。不纯度指标也只回答「这一刀把数据分得多干净」，不回答「这一刀学到了什么」——一列行号能把前一个问题答到满分。',
 }

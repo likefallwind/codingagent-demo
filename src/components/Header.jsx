@@ -18,17 +18,22 @@ export default function Header({ course, courses, onCourseChange, progress, onRe
         }}>Beta</span>
       </div>
       <div style={{ width: 1, height: 22, background: 'var(--border)' }} />
-      <select
-        value={course.id}
-        onChange={(e) => onCourseChange(e.target.value)}
-        aria-label="选择课程"
-        style={{
-          border: '1px solid var(--border)', borderRadius: 8, padding: '5px 9px',
-          fontSize: 13, color: 'var(--ink-mid)', background: '#fff', fontFamily: 'inherit',
-          maxWidth: 260,
-        }}>
-        {courses.map((c) => <option key={c.id} value={c.id}>{c.title}</option>)}
-      </select>
+      {/* A picker only when there is something to pick. */}
+      {courses.length > 1 ? (
+        <select
+          value={course.id}
+          onChange={(e) => onCourseChange(e.target.value)}
+          aria-label="选择课程"
+          style={{
+            border: '1px solid var(--border)', borderRadius: 8, padding: '5px 9px',
+            fontSize: 13, color: 'var(--ink-mid)', background: '#fff', fontFamily: 'inherit',
+            maxWidth: 260,
+          }}>
+          {courses.map((c) => <option key={c.id} value={c.id}>{c.title}</option>)}
+        </select>
+      ) : (
+        <span style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--ink-strong)' }}>{course.title}</span>
+      )}
       <div style={{ fontSize: 12.5, color: 'var(--muted-light)' }}>{course.subtitle}</div>
       <div style={{ flex: 1 }} />
       <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>

@@ -12,7 +12,8 @@ import { existsSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { getCourse, getConcept } from '../src/courses/index.js'
-import { gradeAnswer, diagnoseLabAction, hintForWrongChoice, answerQuestion, generateHint } from './tutor.js'
+import { resolvePractice } from '../src/labs/practice.js'
+import { gradeAnswer, diagnoseLabAction, hintForWrongChoice, answerQuestion, generateHint, cleanScreen } from './tutor.js'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 
@@ -34,7 +35,17 @@ function resolve(req, res) {
     res.status(400).json({ error: `unknown conceptId: ${conceptId}` })
     return null
   }
-  return { course, concept }
+  return { course, concept, screen: cleanScreen(req.body?.screen) }
+}
+
+/**
+ * A check by id: one the author wrote, or a generated practice question rebuilt
+ * from its id. Rebuilt rather than taken from the request, so a hint is always
+ * written against the real question and its real answer.
+ */
+function findCheck(concept, checkId) {
+  if (typeof checkId !== 'string') return null
+  return (concept.checks ?? []).find((c) => c.id === checkId) ?? resolvePractice(concept, checkId)
 }
 
 /**
@@ -83,17 +94,17 @@ app.get('/api/health', (_req, res) => {
 app.post('/api/tutor/grade', async (req, res) => {
   const found = resolve(req, res)
   if (!found) return
-  const { concept } = found
+  const { concept, screen } = found
   const { checkId, answer, learner, misconceptionHistory } = req.body
 
-  const check = concept.checks.find((c) => c.id === checkId)
-  if (!check) return res.status(400).json({ error: `unknown checkId: ${checkId}` })
+  const check = findCheck(concept, checkId)
+  if (!check || check.kind === 'mcq') return res.status(400).json({ error: `unknown written checkId: ${checkId}` })
   if (typeof answer !== 'string' || !answer.trim()) {
     return res.status(400).json({ error: 'answer is empty' })
   }
 
   try {
-    const result = await gradeAnswer({ concept, check, answer, learner, misconceptionHistory })
+    const result = await gradeAnswer({ concept, check, answer: answer.slice(0, 2000), learner, misconceptionHistory, screen })
     res.json(result)
   } catch (err) {
     console.error('[grade]', err.message)
@@ -106,10 +117,15 @@ app.post('/api/tutor/diagnose', async (req, res) => {
   const found = resolve(req, res)
   if (!found) return
   const { action, learner, misconceptionHistory } = req.body
-  if (!action?.facts?.length) return res.status(400).json({ error: 'action.facts is required' })
+  if (!Array.isArray(action?.facts) || !action.facts.length) return res.status(400).json({ error: 'action.facts is required' })
+  const clean = {
+    facts: action.facts.filter((f) => typeof f === 'string').slice(0, 30).map((f) => f.slice(0, 300)),
+    description: typeof action.description === 'string' ? action.description.slice(0, 300) : '',
+    retry: action.retry === true,
+  }
 
   try {
-    const result = await diagnoseLabAction({ concept: found.concept, action, learner, misconceptionHistory })
+    const result = await diagnoseLabAction({ concept: found.concept, action: clean, learner, misconceptionHistory, screen: found.screen })
     res.json(result)
   } catch (err) {
     console.error('[diagnose]', err.message)
@@ -121,15 +137,16 @@ app.post('/api/tutor/diagnose', async (req, res) => {
 app.post('/api/tutor/check-hint', async (req, res) => {
   const found = resolve(req, res)
   if (!found) return
-  const { concept } = found
+  const { concept, screen } = found
   const { checkId, choice, learner, misconceptionHistory } = req.body
 
-  const check = concept.checks.find((c) => c.id === checkId)
+  const check = findCheck(concept, checkId)
   if (!check || check.kind !== 'mcq') return res.status(400).json({ error: `unknown mcq checkId: ${checkId}` })
   if (!Number.isInteger(choice) || !check.options[choice]) return res.status(400).json({ error: 'choice is out of range' })
+  if (check.options[choice].correct) return res.status(400).json({ error: 'that choice is correct — nothing to hint' })
 
   try {
-    const result = await hintForWrongChoice({ concept, check, choice, learner, misconceptionHistory })
+    const result = await hintForWrongChoice({ concept, check, choice, learner, misconceptionHistory, screen })
     res.json(result)
   } catch (err) {
     console.error('[check-hint]', err.message)
@@ -137,7 +154,11 @@ app.post('/api/tutor/check-hint', async (req, res) => {
   }
 })
 
-/** Free-form question, streamed. */
+/**
+ * Free-form question. Sent over SSE like before, but the reply is checked for
+ * invented figures and for giving away the current question's answer before any
+ * of it is sent — see checkedReply in tutor.js.
+ */
 app.post('/api/tutor/ask', async (req, res) => {
   const found = resolve(req, res)
   if (!found) return
@@ -146,22 +167,28 @@ app.post('/api/tutor/ask', async (req, res) => {
     return res.status(400).json({ error: 'question is empty' })
   }
 
-  const { course, concept } = found
+  const { course, concept, screen } = found
   const idx = course.concepts.findIndex((c) => c.id === concept.id)
   const upcoming = course.concepts.slice(idx + 1).map((c) => c.title)
+  const check = screen?.check ? findCheck(concept, screen.check.id) : null
 
-  await streamSSE(res, req, (signal) =>
-    answerQuestion({ concept, question, learner, misconceptionHistory, courseTitle: course.title, upcoming, signal }))
+  await streamSSE(res, req, (signal) => answerQuestion({
+    concept, question: question.slice(0, 500), learner, misconceptionHistory, screen, check,
+    courseTitle: course.title, upcoming, signal,
+  }))
 })
 
-/** Graded hint, streamed. */
+/** Graded hint, aimed at whatever the learner is looking at. Checked like /ask. */
 app.post('/api/tutor/hint', async (req, res) => {
   const found = resolve(req, res)
   if (!found) return
-  const { learner, attemptsInStep = 0, misconceptionHistory, labState } = req.body
+  const { learner, attemptsInStep = 0, misconceptionHistory } = req.body
+  const { concept, screen } = found
+  const check = screen?.check ? findCheck(concept, screen.check.id) : null
 
-  await streamSSE(res, req, (signal) =>
-    generateHint({ concept: found.concept, learner, attemptsInStep, misconceptionHistory, labState, signal }))
+  await streamSSE(res, req, (signal) => generateHint({
+    concept, learner, attemptsInStep: Number(attemptsInStep) || 0, misconceptionHistory, screen, check, signal,
+  }))
 })
 
 // Serve the built front end when one exists, so `npm run build && npm run server`

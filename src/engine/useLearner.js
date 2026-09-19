@@ -31,7 +31,7 @@ export function useLearner(course) {
   }, [learner, course.id])
 
   const record = useCallback((obs) => setLearner((l) => recordEvidence(l, obs)), [])
-  const explained = useCallback((id) => setLearner((l) => markExplained(l, id)), [])
+  const explained = useCallback((id, layer) => setLearner((l) => markExplained(l, id, layer)), [])
   const goTo = useCallback((id) => setLearner((l) => setCurrentConcept(l, id)), [])
   const reset = useCallback(() => setLearner(resetLearner(course)), [course])
 

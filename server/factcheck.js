@@ -69,3 +69,15 @@ export function checkQuantities(text, allowed) {
   const list = [...new Set(bad.map((q) => q.raw))].join('、')
   return `feedback 里出现了材料中没有的数字：${list}。只能引用给定事实里的数字，不确定就不要提数字。`
 }
+
+/**
+ * Drop the sentences that carry an invented figure, keep the rest.
+ *
+ * The last resort after a retry still invents numbers: a reply with one bad
+ * sentence usually has two good ones, and showing those beats showing nothing.
+ * Sentences end at Chinese or Western terminators or a newline.
+ */
+export function redactUnknownFigures(text, allowed) {
+  const sentences = text.match(/[^。！？!?\n]+[。！？!?]?\n?/g) ?? []
+  return sentences.filter((s) => unknownQuantities(s, allowed).length === 0).join('').trim()
+}

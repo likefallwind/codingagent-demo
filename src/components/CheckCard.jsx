@@ -14,16 +14,21 @@
  * `onWrong` wakes the tutor panel to explain what went wrong. For multiple
  * choice the correct option stays hidden until it is picked — revealing it on a
  * miss would turn the retry into copying.
+ *
+ * The card also tells the tutor what is being answered — the question, the
+ * options already ruled out, the draft so far — but never which option is right.
  */
 
-import React, { useRef, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { gradeAnswer } from '../api.js'
 import { Button, Feedback, Card } from './ui.jsx'
 
-const VERDICT_TONE = { correct: 'ok', partial: 'warn', misconception: 'bad' }
-const VERDICT_LABEL = { correct: '答对了', partial: '方向对，但还差一点', misconception: '这里有个理解偏差' }
+const VERDICT_TONE = { correct: 'ok', partial: 'warn', misconception: 'bad', incorrect: 'bad' }
+const VERDICT_LABEL = { correct: '答对了', partial: '方向对，但还差一点', misconception: '这里有个理解偏差', incorrect: '这样答不对' }
 
-export default function CheckCard({ course, concept, check, learnerState, misconceptionHistory, onEvidence, onAnswered, onWrong, onContinue }) {
+export default function CheckCard({
+  course, concept, check, learnerState, misconceptionHistory, screen, onEvidence, onScreen, onAnswered, onWrong, onContinue,
+}) {
   const [choice, setChoice] = useState(null)
   const [wrongPicks, setWrongPicks] = useState([])
   const [answer, setAnswer] = useState('')
@@ -35,6 +40,20 @@ export default function CheckCard({ course, concept, check, learnerState, miscon
   const isMcq = check.kind === 'mcq'
   const solved = isMcq && choice !== null && Boolean(check.options[choice].correct)
 
+  // Report to the tutor. The draft is debounced: every keystroke re-rendering
+  // the whole page (labs included) makes typing lag.
+  useEffect(() => {
+    const t = setTimeout(() => onScreen?.({
+      checkId: check.id,
+      kind: check.kind,
+      prompt: check.prompt,
+      table: check.table ? [check.table.columns.join(' | '), ...check.table.rows.map((r) => r.join(' | '))] : null,
+      eliminated: wrongPicks.map((i) => check.options[i].text),
+      draft: isMcq ? '' : answer.slice(0, 400),
+    }), isMcq ? 0 : 400)
+    return () => clearTimeout(t)
+  }, [check, wrongPicks, answer, isMcq, onScreen])
+
   const submitMcq = (i) => {
     if (solved || wrongPicks.includes(i)) return
     setChoice(i)
@@ -45,12 +64,14 @@ export default function CheckCard({ course, concept, check, learnerState, miscon
     onEvidence({
       kind: 'mcq',
       correct,
-      misconceptionId: correct ? null : (check.misconceptions?.[0] ?? null),
-      detail: { checkId: check.id },
+      // The option's own misconception when it names one: only the wrong answer
+      // that actually reflects a belief should be counted as holding it.
+      misconceptionId: correct ? null : (check.options[i].misconception ?? check.misconceptions?.[0] ?? null),
+      detail: check.generated ? { checkId: check.id, practice: true } : { checkId: check.id },
     })
     if (!correct) {
       setWrongPicks((w) => [...w, i])
-      onWrong?.({ checkId: check.id, choice: i })
+      onWrong?.({ check, choice: i })
     }
   }
 
@@ -72,6 +93,7 @@ export default function CheckCard({ course, concept, check, learnerState, miscon
         answer: text,
         learner: learnerState,
         misconceptionHistory,
+        screen,
       }, ac.signal)
       setResult(res)
       onEvidence({
@@ -80,7 +102,7 @@ export default function CheckCard({ course, concept, check, learnerState, miscon
         misconceptionId: res.misconception_id || null,
         detail: { checkId: check.id, verdict: res.verdict },
       })
-      if (res.verdict !== 'correct') onWrong?.({ checkId: check.id, verdict: res.verdict, feedback: res.feedback })
+      if (res.verdict !== 'correct') onWrong?.({ check, verdict: res.verdict, feedback: res.feedback })
     } catch (err) {
       if (!ac.signal.aborted) {
         // Recorded but not scored — see the note at the top of this file.
@@ -94,11 +116,34 @@ export default function CheckCard({ course, concept, check, learnerState, miscon
 
   const accepted = result?.verdict === 'correct'
 
+  const title = check.generated ? '练一道新题' : check.kind === 'prediction' ? '先预测，再验证' : '检查一下'
+
   return (
-    <Card title={check.kind === 'prediction' ? '先预测，再验证' : '检查一下'}>
+    <div data-check-id={check.id} data-check-kind={check.kind}>
+    <Card title={title}
+          right={check.generated ? <span style={{ fontSize: 11.5, color: 'var(--muted-light)' }}>由真实计算生成，每次都不一样</span> : null}>
       <div style={{ fontSize: 14, lineHeight: 1.8, color: 'var(--ink-strong)', marginBottom: 14, textWrap: 'pretty' }}>
         {check.prompt}
       </div>
+
+      {check.table && (
+        <div style={{ overflowX: 'auto', marginBottom: 14 }}>
+          <table style={{ borderCollapse: 'collapse', fontSize: 12.5, minWidth: '60%' }}>
+            <thead>
+              <tr style={{ color: 'var(--muted)', textAlign: 'left' }}>
+                {check.table.columns.map((c) => <th key={c} style={{ padding: '5px 10px', fontWeight: 500 }}>{c}</th>)}
+              </tr>
+            </thead>
+            <tbody>
+              {check.table.rows.map((r, i) => (
+                <tr key={i} style={{ borderTop: '1px solid var(--border-faint)' }}>
+                  {r.map((v, j) => <td key={j} className="mono" style={{ padding: '5px 10px', color: 'var(--ink-mid)' }}>{v}</td>)}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {isMcq ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
@@ -109,7 +154,7 @@ export default function CheckCard({ course, concept, check, learnerState, miscon
             const bd = tone === 'ok' ? 'var(--ok-line)' : tone === 'bad' ? 'var(--bad-line)' : 'var(--border)'
             const bg = tone === 'ok' ? 'var(--ok-bg)' : tone === 'bad' ? 'var(--bad-bg)' : '#fff'
             return (
-              <button key={i} onClick={() => submitMcq(i)} disabled={locked}
+              <button key={i} data-option={i} onClick={() => submitMcq(i)} disabled={locked}
                 style={{
                   display: 'flex', alignItems: 'flex-start', gap: 10, textAlign: 'left',
                   border: `1.5px solid ${bd}`, background: bg, borderRadius: 10, padding: '12px 14px',
@@ -199,5 +244,6 @@ export default function CheckCard({ course, concept, check, learnerState, miscon
         </div>
       )}
     </Card>
+    </div>
   )
 }

@@ -16,7 +16,9 @@ import {
 } from './cart.js'
 import { SAMPLES, TRAIN, VAL, DEPTHS, PEEL_LABEL, APPLE, ORANGE, classEmoji } from './dataset.js'
 import TreeView from './TreeView.jsx'
-import { Card, Stat, Chip, Button, Feedback, Slider } from '../../components/ui.jsx'
+import CodeView from './CodeView.jsx'
+import { useScreen } from '../screen.js'
+import { Card, Stat, Chip, Button, Choice, Feedback, Slider } from '../../components/ui.jsx'
 
 const pct = (v) => `${(v * 100).toFixed(1)}%`
 
@@ -28,29 +30,57 @@ function useCurve() {
 // ---------------------------------------------------------------- step 4
 
 /**
+ * Options for "how many leaves will depth 8 have?". The honest intuition — it
+ * doubles every level, so 2⁸ — is the tempting wrong answer; the real tree
+ * stops splitting wherever a node is pure or too small.
+ */
+const LEAF_GUESSES = [16, 40, 128, 256]
+
+/**
  * Watch the tree and its decision boundary change with depth.
  *
  * The boundary strip is the part that lands: at depth 2-3 it is a few broad
  * blocks, and by depth 7-8 it has broken into thin stripes that each exist to
- * accommodate one or two training points.
+ * accommodate one or two training points. The slider waits for a prediction
+ * first, so the learner meets the leaf count with an expectation to check.
  */
-export function DepthExplorer({ onEvidence }) {
+export function DepthExplorer({ onEvidence, onScreen }) {
   const { trees, curve, best } = useCurve()
   const [depth, setDepth] = useState(3)
   const [seenDeep, setSeenDeep] = useState(false)
+  const [leafGuess, setLeafGuess] = useState(null)
+  const [showCode, setShowCode] = useState(false)
 
   const tree = trees[depth]
   const point = curve.find((p) => p.d === depth)
+  const deepest = curve[curve.length - 1]
+  const closest = LEAF_GUESSES.reduce((a, b) => (Math.abs(b - deepest.leaves) < Math.abs(a - deepest.leaves) ? b : a))
+
+  const guessLeaves = (g) => {
+    if (leafGuess !== null) return
+    setLeafGuess(g)
+    const correct = g === closest
+    onEvidence({
+      kind: 'labAction',
+      correct,
+      detail: { labStep: 'guess-leaves', guess: g },
+      description: correct
+        ? `预测 depth 8 大约 ${g} 个叶子，实际 ${deepest.leaves} 个`
+        : `预测 depth 8 大约 ${g} 个叶子，实际只有 ${deepest.leaves} 个`,
+      facts: curve.map((p) => `depth ${p.d}：${p.leaves} 个叶子`),
+    })
+  }
 
   // Dragging past the optimum is the observation this step exists for; record it
-  // once, the first time they go there.
+  // once, the first time they go there. It is something the learner did, not a
+  // judgement they made, so it counts as exploration.
   useEffect(() => {
     if (depth > best && !seenDeep) {
       setSeenDeep(true)
       const bp = curve.find((p) => p.d === best)
       const cp = curve.find((p) => p.d === depth)
       onEvidence({
-        kind: 'labAction',
+        kind: 'labExplore',
         correct: true,
         detail: { labStep: 'depth-past-optimum', depth },
         description: `把深度拖到 ${depth}，越过了验证误差最低的 depth ${best}`,
@@ -61,6 +91,21 @@ export function DepthExplorer({ onEvidence }) {
       })
     }
   }, [depth, best, seenDeep, curve, onEvidence])
+
+  useScreen(onScreen, {
+    doing: leafGuess === null ? '在预测 depth 8 的树会有多少个叶子' : `把 max_depth 拖到 ${depth}`,
+    facts: [
+      `当前 depth ${depth}：${point.leaves} 个叶子，训练准确率 ${pct(1 - point.tr)}，验证准确率 ${pct(1 - point.va)}`,
+      ...(depth >= best ? [`验证误差最低的是 depth ${best}`] : []),
+      ...(leafGuess !== null ? [`depth 8 实际有 ${deepest.leaves} 个叶子；2 的 8 次方是 256`] : []),
+      ...(depth >= 6 ? ['决策边界上出现了很多细条纹'] : []),
+    ],
+    moment: seenDeep ? {
+      id: 'past-optimum',
+      text: `你刚把深度拖过了 depth ${best}——验证准确率最高的地方。往下看决策边界：细条纹就是从这里开始冒出来的。`,
+      ask: `为什么越过 depth ${best} 之后，训练准确率还在涨，验证准确率却下降了？`,
+    } : null,
+  })
 
   // Decision boundary: weight across, one band per peel level, aroma held at 1.
   const bands = [3, 2, 1].map((peel) => ({
@@ -73,9 +118,31 @@ export function DepthExplorer({ onEvidence }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <Card title="树的最大深度">
-        <Slider label="max_depth" value={depth} min={1} max={8} onChange={setDepth}
-                note={depth > best ? `已越过最优深度 ${best}` : depth === best ? '验证误差最低点' : undefined} />
+      {leafGuess === null ? (
+        <Card title="先预测">
+          <div style={{ fontSize: 13.5, color: 'var(--ink-mid)', lineHeight: 1.8, marginBottom: 12 }}>
+            depth 1 的树有 2 个叶子。把深度一路加到 8，这棵树大约会有多少个叶子？
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
+            {LEAF_GUESSES.map((g) => (
+              <Choice key={g} label={g === 256 ? '256 个（2⁸）' : `大约 ${g} 个`} onClick={() => guessLeaves(g)} />
+            ))}
+          </div>
+        </Card>
+      ) : (
+        <Feedback tone={leafGuess === closest ? 'ok' : 'warn'} title={`depth 8 实际有 ${deepest.leaves} 个叶子`}>
+          {leafGuess === closest ? '猜对了。' : `你猜的是大约 ${leafGuess} 个。`}
+          每深一层叶子<b>最多</b>翻一倍，2⁸ = 256 只是上限。只要一个节点纯了、或者样本太少分不下去，它就不再分——
+          240 个训练样本撑不起 256 个叶子。下面拖动滑块，看叶子数和决策边界怎么一层层变化。
+        </Feedback>
+      )}
+
+      <Card title="树的最大深度"
+            right={<Button variant="quiet" style={{ height: 30, fontSize: 12.5 }} onClick={() => setShowCode((v) => !v)}>
+              {showCode ? '收起代码' : '查看代码'}
+            </Button>}>
+        <Slider label="max_depth" value={depth} min={1} max={8} onChange={setDepth} disabled={leafGuess === null}
+                note={leafGuess === null ? '先回答上面的预测' : depth > best ? `已越过最优深度 ${best}` : depth === best ? '验证误差最低点' : undefined} />
         <div style={{ display: 'flex', gap: 20, marginTop: 20 }}>
           <Stat label="最大深度" value={depth} />
           <Stat label="叶子数" value={point.leaves} />
@@ -84,6 +151,11 @@ export function DepthExplorer({ onEvidence }) {
                 tone={depth > best ? 'var(--bad)' : 'var(--ok-deep)'}
                 sub={depth > best ? '比最优深度更差' : undefined} />
         </div>
+        {showCode && (
+          <div style={{ marginTop: 16 }}>
+            <CodeView depth={depth} minLeaf={1} trErr={point.tr} vaErr={point.va} leaves={point.leaves} />
+          </div>
+        )}
       </Card>
 
       <Card title="树长成这样" right={<Chip tone={point.leaves > 10 ? 'warn' : 'neutral'}>{point.leaves} 个叶子</Chip>}>
@@ -138,12 +210,21 @@ export function DepthExplorer({ onEvidence }) {
  * real judgement with a checkable answer — the depth at which validation error
  * stops improving.
  */
-export function CurveExplorer({ onEvidence }) {
+export function CurveExplorer({ onEvidence, onScreen }) {
   const { curve, best, trees } = useCurve()
   const [guess, setGuess] = useState(null)
 
   const bestPoint = curve.find((p) => p.d === best)
   const deepest = curve[curve.length - 1]
+
+  // Before the guess the chart has no numbers on it — only the shapes of two
+  // lines — so the tutor gets the shapes too, not the minimum it is asking for.
+  useScreen(onScreen, {
+    doing: guess ? `点了 depth ${guess.d} 作为过拟合的起点` : '在看训练误差和验证误差两条曲线，还没点出过拟合从哪开始',
+    facts: guess
+      ? curve.map((p) => `depth ${p.d}：训练误差 ${pct(p.tr)}，验证误差 ${pct(p.va)}，${p.leaves} 个叶子`)
+      : ['横轴是 max_depth，从 1 到 8', '蓝线是训练误差，红线是验证误差', '纵轴刻度从 0% 到 50%'],
+  })
 
   const x = (d) => 70 + ((d - 1) / 7) * 790
   const y = (e) => 320 - (Math.min(e, 0.5) / 0.5) * 280
@@ -184,7 +265,7 @@ export function CurveExplorer({ onEvidence }) {
           <path d={pathOf('va')} stroke="var(--bad)" strokeWidth={2.4} fill="none" />
 
           {curve.map((p) => (
-            <g key={p.d} onClick={() => pick(p.d)} style={{ cursor: guess ? 'default' : 'pointer' }}>
+            <g key={p.d} data-depth={p.d} onClick={() => pick(p.d)} style={{ cursor: guess ? 'default' : 'pointer' }}>
               <rect x={x(p.d) - 22} y={26} width={44} height={300} fill="transparent" />
               <circle cx={x(p.d)} cy={y(p.tr)} r={4} fill="var(--brand)" />
               <circle cx={x(p.d)} cy={y(p.va)} r={4} fill="var(--bad)" />
@@ -268,13 +349,17 @@ export function CurveExplorer({ onEvidence }) {
  * The verdict is computed against the best achievable validation error, so
  * "pruned well" means something specific rather than being a compliment.
  */
-export function PruneExplorer({ onEvidence }) {
+export function PruneExplorer({ onEvidence, onScreen }) {
   const { curve, best } = useCurve()
   const [depth, setDepth] = useState(5)
   const [minLeaf, setMinLeaf] = useState(1)
   const [overPruned, setOverPruned] = useState(false)
+  const [showCode, setShowCode] = useState(false)
+  const [quizLine, setQuizLine] = useState('还没开始小测验')
+  const [prunedWell, setPrunedWell] = useState(false)
 
   const bestVa = curve.find((p) => p.d === best).va
+  const bestLeaves = curve.find((p) => p.d === best).leaves
   const tree = useMemo(() => grow(TRAIN, 0, depth, minLeaf), [depth, minLeaf])
   const trErr = errRate(tree, TRAIN)
   const vaErr = errRate(tree, VAL)
@@ -299,9 +384,32 @@ export function PruneExplorer({ onEvidence }) {
     }
   }, [vaErr, bestVa, minLeaf, overPruned, depth, leaves, trErr, best, onEvidence])
 
+  // The good outcome worth pointing out: fewer leaves than the best unpruned
+  // tree, and not a sample worse on validation.
+  useEffect(() => {
+    if (!prunedWell && minLeaf > 1 && leaves < bestLeaves && vaErr <= bestVa + 1e-9) setPrunedWell(true)
+  }, [prunedWell, minLeaf, leaves, bestLeaves, vaErr, bestVa])
+
+  useScreen(onScreen, {
+    doing: `把 max_depth 调到 ${depth}、min_samples_leaf 调到 ${minLeaf}`,
+    facts: [
+      `当前：${leaves} 个叶子，训练误差 ${pct(trErr)}，验证误差 ${pct(vaErr)}`,
+      `能达到的最低验证误差是 ${pct(bestVa)}（depth ${best}，不剪枝时 ${bestLeaves} 个叶子）`,
+      `小测验：${quizLine}`,
+    ],
+    moment: prunedWell ? {
+      id: 'pruned-well',
+      text: `验证误差还是 ${pct(bestVa)}，和能达到的最低点一样，可树从 ${bestLeaves} 个叶子剪到了 ${leaves} 个。`,
+      ask: '为什么叶子变少了，验证误差却一点没变差？',
+    } : null,
+  })
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <Card title="两个旋钮">
+      <Card title="两个旋钮"
+            right={<Button variant="quiet" style={{ height: 30, fontSize: 12.5 }} onClick={() => setShowCode((v) => !v)}>
+              {showCode ? '收起代码' : '查看代码'}
+            </Button>}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
           <Slider label="max_depth" value={depth} min={1} max={8} onChange={setDepth}
                   note={depth === best ? '验证误差最低点' : undefined} />
@@ -314,6 +422,11 @@ export function PruneExplorer({ onEvidence }) {
           <Stat label="验证误差" value={pct(vaErr)} tone={good ? 'var(--ok-deep)' : 'var(--bad)'} />
           <Stat label="能达到的最低" value={pct(bestVa)} sub={`depth ${best}`} />
         </div>
+        {showCode && (
+          <div style={{ marginTop: 16 }}>
+            <CodeView depth={depth} minLeaf={minLeaf} trErr={trErr} vaErr={vaErr} leaves={leaves} />
+          </div>
+        )}
       </Card>
 
       <Feedback tone={good ? 'ok' : 'warn'} title={good ? '剪得不错' : '还可以调'}>
@@ -326,7 +439,7 @@ export function PruneExplorer({ onEvidence }) {
         <TreeView tree={tree} width={900} height={260} />
       </Card>
 
-      <QuizCard onEvidence={onEvidence} />
+      <QuizCard onEvidence={onEvidence} onProgress={setQuizLine} />
     </div>
   )
 }
@@ -337,13 +450,28 @@ export function PruneExplorer({ onEvidence }) {
  * Uses the authored step-1 tree rather than the trained one, so the learner is
  * re-reading the tree they were first taught on and can follow every branch.
  */
-function QuizCard({ onEvidence }) {
+function QuizCard({ onEvidence, onProgress }) {
   const tree = useMemo(() => buildFromSpec(SAMPLES, ILLUSTRATIVE_SPEC), [])
   const fruit = { w: 198, peel: 2, aroma: 1 }
   const truth = ORANGE
 
   const [answers, setAnswers] = useState([])
   const { path: fullPath, leaf: trueLeaf } = decisionPath(tree, fruit)
+
+  useEffect(() => {
+    let n = tree
+    const walked = []
+    for (const a of answers) {
+      if (!n.split) break
+      walked.push(`${splitLabel(n.split.key, n.split.thr)}？${a ? '是' : '否'}`)
+      n = a ? n.left : n.right
+    }
+    onProgress?.(answers.length === 0
+      ? `新水果（重量 ${fruit.w} g，果皮${PEEL_LABEL[fruit.peel]}，有果香）还没开始走`
+      : n.split
+        ? `新水果走到一半：${walked.join(' → ')}`
+        : `新水果走完了：${walked.join(' → ')}，判为${n.cls === APPLE ? '苹果' : '橙子'}（真实是橙子）`)
+  }, [answers, tree, onProgress])
 
   // Walk the tree following the learner's own yes/no choices.
   let node = tree
@@ -369,6 +497,7 @@ function QuizCard({ onEvidence }) {
         kind: 'labAction',
         correct: ok,
         detail: { labStep: 'quiz-walk', answers: next },
+        retry: !ok,
         description: ok
           ? '正确地把新水果沿树走到了叶子'
           : `走到了判为${n.cls === APPLE ? '苹果' : '橙子'}的叶子，真实答案是橙子`,

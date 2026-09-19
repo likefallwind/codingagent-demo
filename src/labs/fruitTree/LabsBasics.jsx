@@ -8,6 +8,11 @@
  * decided here, from the real computation, never by the language model. The
  * `facts` a lab attaches are the exact figures the tutor is later allowed to
  * quote when explaining a mistake.
+ *
+ * Each lab also reports what it is showing through `onScreen` (see
+ * ../screen.js), so the tutor can talk about what the learner is looking at.
+ * A snapshot lists only what is visible: a count the learner has not revealed
+ * yet is not handed to the tutor either.
  */
 
 import React, { useEffect, useMemo, useState } from 'react'
@@ -17,6 +22,7 @@ import {
 } from './cart.js'
 import { SAMPLES, FEATURES, PEEL_LABEL, APPLE, classEmoji } from './dataset.js'
 import TreeView from './TreeView.jsx'
+import { useScreen } from '../screen.js'
 import { Card, Stat, GiniBar, Chip, Button, Choice, Feedback, Slider } from '../../components/ui.jsx'
 
 const f3 = (v) => v.toFixed(3)
@@ -32,7 +38,7 @@ const pct = (v) => `${(v * 100).toFixed(1)}%`
  * about impure leaves. The learner is asked to find the leaf that contains a
  * mistake, which forces them to actually read the counts instead of nodding along.
  */
-export function TreeReader({ onEvidence }) {
+export function TreeReader({ onEvidence, onScreen }) {
   const tree = useMemo(() => buildFromSpec(SAMPLES, ILLUSTRATIVE_SPEC), [])
   const [picked, setPicked] = useState(null)
   const [showAll, setShowAll] = useState(false)
@@ -50,6 +56,8 @@ export function TreeReader({ onEvidence }) {
 
   const impureKey = leaves.find((l) => nodeMistakes(l.node.rows) > 0)?.key
 
+  const where = ['最左边', '中间', '最右边']
+
   const pick = (node, key) => {
     if (picked) return
     if (node.split) return // only leaves answer the question
@@ -64,14 +72,41 @@ export function TreeReader({ onEvidence }) {
       description: correct
         ? '正确找出了那个含有错误样本的叶子'
         : `点选了一个纯叶子（${c.a} 苹果 / ${c.o} 橙子），没有找出混着的那个`,
-      facts: leaves.map((l) => {
-        const cc = counts(l.node.rows)
-        return `叶子「${l.node.cls === APPLE ? '苹果' : '橙子'}」：${cc.n} 个样本，${cc.a} 苹果 / ${cc.o} 橙子，错 ${nodeMistakes(l.node.rows)} 个`
-      }),
+      // After a miss the learner tries again, so the tutor gets only what the
+      // screen shows — the picked leaf's contents and every leaf's size — and
+      // not which leaf is the mixed one. It cannot give away what it was never told.
+      retry: !correct,
+      facts: correct
+        ? leaves.map((l, i) => {
+          const cc = counts(l.node.rows)
+          return `${where[i]}的叶子：${cc.n} 个样本，${cc.a} 苹果 / ${cc.o} 橙子，错 ${nodeMistakes(l.node.rows)} 个`
+        })
+        : [
+          `学生点的叶子：${c.n} 个样本，${c.a} 苹果 / ${c.o} 橙子，是纯的`,
+          ...leaves.map((l, i) => `${where[i]}的叶子：${counts(l.node.rows).n} 个样本，判为${l.node.cls === APPLE ? '苹果' : '橙子'}`),
+        ],
     })
   }
 
   const rows = showAll ? SAMPLES : SAMPLES.filter((_, i) => i < 4 || (i >= 8 && i < 12))
+
+  useScreen(onScreen, {
+    doing: !picked
+      ? '在看第 1 步的示例树，找哪个叶子判错了样本'
+      : picked.correct ? '找对了那个判错了样本的叶子' : '点了一个纯叶子，正在重新找判错了样本的叶子',
+    facts: [
+      '示例树先问「果皮是薄的吗」，是就判苹果；否则再问「重量 ≤ 180 g 吗」',
+      ...leaves.map((l, i) => {
+        const c = counts(l.node.rows)
+        // Class counts only once a leaf has been picked: before that, which
+        // leaf is mixed is the question itself.
+        return picked
+          ? `${where[i]}的叶子：${c.n} 个样本，${c.a} 苹果 / ${c.o} 橙子，判为${l.node.cls === APPLE ? '苹果' : '橙子'}`
+          : `${where[i]}的叶子：${c.n} 个样本，判为${l.node.cls === APPLE ? '苹果' : '橙子'}`
+      }),
+      showAll ? '样本表展开了全部 16 行' : '样本表只显示了 8 行',
+    ],
+  })
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -173,10 +208,15 @@ export function TreeReader({ onEvidence }) {
  * the same functions the tree builder uses, so what the learner sees here is
  * literally what the algorithm sees when it chooses.
  */
-export function SplitExplorer({ onEvidence }) {
-  const [feat, setFeat] = useState('peel')
-  const [thr, setThr] = useState({ peel: 1, w: 180, aroma: 0 })
+export function SplitExplorer({ onEvidence, onScreen }) {
+  // Opens on a middling cut. Opening on the best one (peel = thin) recorded
+  // "found the best split" before the learner had touched anything.
+  const [feat, setFeat] = useState('w')
+  const [thr, setThr] = useState({ peel: 2, w: 180, aroma: 0 })
   const [found, setFound] = useState(false)
+  // The ranking stays hidden until the learner commits to a guess: shown up
+  // front, it is the answer to the one judgement this step asks for.
+  const [guess, setGuess] = useState(null)
 
   const current = thr[feat]
   const [left, right] = splitRows(SAMPLES, feat, current)
@@ -195,8 +235,10 @@ export function SplitExplorer({ onEvidence }) {
   useEffect(() => {
     if (!isBest || found) return
     setFound(true)
+    // Exploration, not judgement: sweeping the slider until the number peaks
+    // shows engagement, so it is recorded at the weight exploring deserves.
     onEvidence({
-      kind: 'labAction',
+      kind: 'labExplore',
       correct: true,
       detail: { labStep: 'find-best-split', feature: feat, thr: current },
       description: `找到了增益最大的一刀：${splitLabel(feat, current)}`,
@@ -206,6 +248,35 @@ export function SplitExplorer({ onEvidence }) {
 
   const range = { w: { min: 110, max: 250, step: 5 }, peel: { min: 1, max: 2, step: 1 }, aroma: { min: 0, max: 0, step: 1 } }[feat]
   const display = feat === 'w' ? `${current} g` : feat === 'peel' ? `≤ ${PEEL_LABEL[current]}` : '无果香'
+  const featName = FEATURES.find((f) => f.key === feat).name
+
+  const commit = (key) => {
+    if (guess) return
+    setGuess(key)
+    const correct = key === best.key
+    const picked = ranking.find((r) => r.key === key)
+    onEvidence({
+      kind: 'labAction',
+      correct,
+      misconceptionId: correct ? null : (key === 'w' ? 'more_thresholds_better' : null),
+      detail: { labStep: 'guess-best-feature', guess: key },
+      description: correct
+        ? `猜对了：${best.name}最好的一刀增益最高`
+        : `猜${picked.name}最好，实际是${best.name}（${f3(best.gain)}，而${picked.name}最好的一刀是 ${f3(picked.gain)}）`,
+      facts: ranking.map((r) => `${r.name}最好的一刀是「${r.condition}」，增益 ${f3(r.gain)}`),
+    })
+  }
+
+  useScreen(onScreen, {
+    doing: `按「${featName}」切，${feat === 'aroma' ? '只有「有 / 无」一种切法' : `阈值 ${display}`}${guess ? '' : '（还没猜哪个特征最好）'}`,
+    facts: [
+      `分裂前基尼 ${f3(before)}`,
+      `左边（满足条件）${left.length} 个：${counts(left).a} 苹果 / ${counts(left).o} 橙子，基尼 ${f3(gl)}`,
+      `右边 ${right.length} 个：${counts(right).a} 苹果 / ${counts(right).o} 橙子，基尼 ${f3(gr)}`,
+      gain < 0 ? '这一刀没有把样本分开' : `这一刀的增益 ${f3(gain)}`,
+      ...(guess ? ranking.map((r) => `${r.name}最好的一刀「${r.condition}」增益 ${f3(r.gain)}`) : []),
+    ],
+  })
 
   // Scatter geometry, matching the mockup's projection.
   const xw = (w) => 70 + ((w - 100) / 180) * 790
@@ -295,7 +366,21 @@ export function SplitExplorer({ onEvidence }) {
           </div>
         </Card>
 
-        <Card title="三个特征的最好成绩" style={{ flex: 1 }}>
+        {!guess ? (
+          <Card title="先猜一下" style={{ flex: 1 }}>
+            <div style={{ fontSize: 13.5, color: 'var(--ink-mid)', lineHeight: 1.8, marginBottom: 12 }}>
+              每个特征都按它<b>自己最好的阈值</b>切一刀。三个特征里，谁的那一刀增益最高？
+              可以先在左边试着切切看，想好了再选。
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
+              {FEATURES.map((f) => (
+                <Choice key={f.key} label={f.name} onClick={() => commit(f.key)} />
+              ))}
+            </div>
+          </Card>
+        ) : (
+        <Card title="三个特征的最好成绩" style={{ flex: 1 }}
+              right={<Chip tone={guess === best.key ? 'ok' : 'warn'}>{guess === best.key ? '你猜对了' : `你猜的是${FEATURES.find((f) => f.key === guess).name}`}</Chip>}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
             {ranking.map((r, i) => (
               <div key={r.key} style={{
@@ -317,6 +402,7 @@ export function SplitExplorer({ onEvidence }) {
             但候选多少和最终增益没有关系。
           </div>
         </Card>
+        )}
       </div>
     </div>
   )
@@ -331,7 +417,7 @@ export function SplitExplorer({ onEvidence }) {
  * tree are both evaluated on the same 16 samples and the mistake counts are put
  * side by side.
  */
-export function TreeBuilder({ onEvidence }) {
+export function TreeBuilder({ onEvidence, onScreen }) {
   const [root, setRoot] = useState(null)
   const [second, setSecond] = useState(null)
 
@@ -366,6 +452,24 @@ export function TreeBuilder({ onEvidence }) {
     : null
 
   const reset = () => { setRoot(null); setSecond(null) }
+
+  const side = impureSide === 'left' ? '左' : '右'
+  useScreen(onScreen, {
+    doing: !root
+      ? '在选第一刀要问哪个问题'
+      : !second && impureSide
+        ? `第一刀选了「${splitLabel(root, rootInfo.thr)}」，在选第二刀`
+        : `建好了两刀：「${splitLabel(root, rootInfo.thr)}」${secondBest ? `和「${splitLabel(second, secondBest.thr)}」` : ''}`,
+    facts: root ? [
+      `第一刀「${splitLabel(root, rootInfo.thr)}」增益 ${f3(rootInfo.gain)}；算法会选「${ranking[0].condition}」，增益 ${f3(ranking[0].gain)}`,
+      `满足条件的一边 ${counts(l).a} 苹果 / ${counts(l).o} 橙子，其余一边 ${counts(r).a} 苹果 / ${counts(r).o} 橙子`,
+      ...(impureSide ? [`${side}边还混着 ${impureRows.length} 个样本`] : []),
+      ...(secondBest ? [
+        `第二刀「${splitLabel(second, secondBest.thr)}」切出 ${counts(secondBest.l).a} 苹果 / ${counts(secondBest.l).o} 橙子 和 ${counts(secondBest.r).a} 苹果 / ${counts(secondBest.r).o} 橙子`,
+        `你的两层树在 16 个样本上错 ${myMistakes} 个，算法的两层树错 ${algoMistakes} 个`,
+      ] : []),
+    ] : ['16 个样本：8 苹果 / 8 橙子，基尼 0.500'],
+  })
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>

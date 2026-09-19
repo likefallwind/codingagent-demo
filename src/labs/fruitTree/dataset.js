@@ -75,10 +75,27 @@ export function generatePopulation(seed = 20240616, n = 300) {
 
 export const POPULATION = generatePopulation()
 
-// Deterministic every-fifth holdout. Not shuffled: the generator already emits
-// rows in no meaningful order, and a fixed stride keeps the split reproducible.
-export const TRAIN = POPULATION.filter((_, i) => i % 5 !== 0)
-export const VAL = POPULATION.filter((_, i) => i % 5 === 0)
+/**
+ * Deterministic every-fifth holdout. Not shuffled: the generator already emits
+ * rows in no meaningful order, and a fixed stride keeps the split reproducible.
+ */
+export const holdout = (rows) => ({
+  train: rows.filter((_, i) => i % 5 !== 0),
+  val: rows.filter((_, i) => i % 5 === 0),
+})
+
+export const { train: TRAIN, val: VAL } = holdout(POPULATION)
+
+/**
+ * Other harvests from the same orchard, for the instability step: same rule,
+ * same noise rate, different fruit. Batch 0 is the training set every earlier
+ * step used, so the learner starts from the tree they already know.
+ */
+export const BATCH_SEEDS = [20240616, 11, 22, 33, 44, 55, 66, 77]
+export const batchTrain = (i) => (i === 0 ? TRAIN : generatePopulation(BATCH_SEEDS[i], TRAIN.length))
+
+/** 600 fruits no tree has trained on — the yardstick for "do two trees disagree". */
+export const PROBE = generatePopulation(777, 600)
 
 export const DEPTHS = [1, 2, 3, 4, 5, 6, 7, 8]
 

@@ -47,3 +47,11 @@ test('text with no quantities always passes', () => {
   assert.equal(checkQuantities('你把关键点抓住了，继续往下看。', FACTS), null)
   assert.equal(checkQuantities('', FACTS), null)
 })
+
+test('redaction drops only the sentences with invented figures', async () => {
+  const { redactUnknownFigures } = await import('../server/factcheck.js')
+  const allowed = '训练误差 6.3%，验证误差 10.0%'
+  const text = '训练误差降到了 6.3%。验证误差其实是 12.5%。所以要看验证集！'
+  assert.equal(redactUnknownFigures(text, allowed), '训练误差降到了 6.3%。所以要看验证集！')
+  assert.equal(redactUnknownFigures('全是 42.0% 编的。', allowed), '')
+})

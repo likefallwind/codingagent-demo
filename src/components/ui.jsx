@@ -125,17 +125,20 @@ export function Feedback({ tone = 'neutral', title, children, style }) {
   )
 }
 
-/** Labelled slider — the lesson's parameters are all one of these. */
-export function Slider({ label, value, min, max, step = 1, onChange, display, note }) {
+/**
+ * Labelled slider — the lesson's parameters are all one of these. `disabled`
+ * holds it still while the lab waits for a prediction.
+ */
+export function Slider({ label, value, min, max, step = 1, onChange, display, note, disabled }) {
   return (
-    <div>
+    <div style={{ opacity: disabled ? 0.45 : 1 }}>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 8 }}>
         <span style={{ fontSize: 12.5, color: 'var(--muted)' }}>{label}</span>
         <span className="mono" style={{ fontSize: 15, fontWeight: 500, color: 'var(--brand)' }}>{display ?? value}</span>
         <div style={{ flex: 1 }} />
         {note && <span style={{ fontSize: 11.5, color: 'var(--muted-light)' }}>{note}</span>}
       </div>
-      <input type="range" min={min} max={max} step={step} value={value}
+      <input type="range" min={min} max={max} step={step} value={value} disabled={disabled}
              onChange={(e) => onChange(Number(e.target.value))} aria-label={label} />
     </div>
   )

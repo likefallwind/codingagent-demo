@@ -98,7 +98,7 @@ export default function TreeView({
       {L.internals.map((n) => (n.compact ? (
         <circle key={n.key} cx={n.cx} cy={n.cy} r={3.4} fill="#9fb8e8" />
       ) : (
-        <g key={n.key} onClick={onNodeClick ? () => onNodeClick(n.node, n.key) : undefined}
+        <g key={n.key} data-node={n.key} onClick={onNodeClick ? () => onNodeClick(n.node, n.key) : undefined}
            style={{ cursor: onNodeClick ? 'pointer' : 'default' }}>
           <rect x={n.x} y={n.y} width={n.w} height={n.h} rx={9}
                 fill={hi.has(n.key) ? 'var(--brand-tint)' : '#fff'}
@@ -109,7 +109,7 @@ export default function TreeView({
       )))}
 
       {L.leaves.map((n) => (
-        <g key={n.key} onClick={onNodeClick ? () => onNodeClick(n.node, n.key) : undefined}
+        <g key={n.key} data-node={n.key} data-leaf="1" onClick={onNodeClick ? () => onNodeClick(n.node, n.key) : undefined}
            style={{ cursor: onNodeClick ? 'pointer' : 'default' }}>
           <circle cx={n.cx} cy={n.cy} r={n.r} fill={n.fill}
                   stroke={hi.has(n.key) ? 'var(--brand)' : 'none'} strokeWidth={hi.has(n.key) ? 2.5 : 0} />

@@ -5,7 +5,7 @@ import {
   initLearner, recordEvidence, markExplained, updateMastery, conceptStatus,
   activeMisconceptions, progress, MASTERY_THRESHOLD, STRUGGLING_THRESHOLD,
 } from '../src/engine/learnerModel.js'
-import { nextAction, explainDecision, openChecks, reviewCheck } from '../src/engine/policy.js'
+import { nextAction, explainDecision, openChecks, reviewCheck, practiceSeed } from '../src/engine/policy.js'
 
 /**
  * A course about baking bread. Nothing to do with decision trees — if the engine
@@ -40,6 +40,13 @@ const bread = {
       checks: [{ id: 'f1', kind: 'mcq', prompt: '酵母产生什么？', options: [{ text: '二氧化碳', correct: true }, { text: '氧气', correct: false }] }],
     },
   ],
+}
+
+/** A concept's state as if every authored check had been answered correctly at `mastery`. */
+const done = (l, id, mastery = 0.95) => {
+  const concept = bread.concepts.find((c) => c.id === id)
+  const evidence = (concept.checks ?? []).map((c, i) => ({ ts: i + 1, conceptId: id, kind: c.kind, correct: true, detail: { checkId: c.id } }))
+  return { ...l, concepts: { ...l.concepts, [id]: { ...l.concepts[id], mastery, seenExplain: true, evidence } } }
 }
 
 test('a well-formed course validates clean', () => {
@@ -88,7 +95,7 @@ test('evidence weight makes a guessable MCQ move mastery less than a written ans
 test('downstream concepts stay locked until the prerequisite is mastered', () => {
   let l = initLearner(bread)
   assert.equal(conceptStatus(l, bread, 'fermentation'), 'locked')
-  l = { ...l, concepts: { ...l.concepts, gluten: { ...l.concepts.gluten, mastery: 0.95 } } }
+  l = done(l, 'gluten')
   assert.equal(conceptStatus(l, bread, 'fermentation'), 'available')
 })
 
@@ -200,24 +207,19 @@ test('a misconception from another concept\'s catalogue does not stall this one'
 })
 
 test('mastering a concept advances to the next, then completes the course', () => {
-  let l = initLearner(bread)
-  l = { ...l, concepts: { ...l.concepts, gluten: { ...l.concepts.gluten, mastery: 0.95, seenExplain: true } } }
+  let l = done(initLearner(bread), 'gluten')
   const advance = nextAction(l, bread)
   assert.equal(advance.type, 'advance')
   assert.equal(advance.conceptId, 'fermentation')
 
-  l = {
-    ...l,
-    currentConceptId: 'fermentation',
-    concepts: { ...l.concepts, fermentation: { ...l.concepts.fermentation, mastery: 0.95, seenExplain: true } },
-  }
+  l = { ...done(l, 'fermentation'), currentConceptId: 'fermentation' }
   assert.equal(nextAction(l, bread).type, 'complete')
 })
 
 test('progress reports mastered count and course fraction', () => {
   let l = initLearner(bread)
   assert.deepEqual(progress(l, bread), { mastered: 0, total: 2, fraction: 0, avgMastery: 0.15 })
-  l = { ...l, concepts: { ...l.concepts, gluten: { ...l.concepts.gluten, mastery: 0.95 } } }
+  l = done(l, 'gluten')
   assert.equal(progress(l, bread).mastered, 1)
 })
 
@@ -251,4 +253,96 @@ test('mastery is reachable in a sane number of attempts', () => {
   let nMcq = 0
   while (mcq < MASTERY_THRESHOLD && nMcq < 20) { mcq = updateMastery(mcq, true, 0.6); nMcq++ }
   assert.equal(nMcq, 4) // guessable evidence needs more of it
+})
+
+// --- generated practice, layered re-explanation, exploration evidence --------
+
+const withPractice = () => {
+  const c = structuredClone(bread)
+  c.concepts[0].practice = { type: 'kneading-drill' }
+  return c
+}
+
+test('with a practice generator, exhausted checks lead to a fresh question rather than a re-ask', () => {
+  const course = withPractice()
+  let l = markExplained(initLearner(course), 'gluten')
+  const ans = (kind, correct, detail) => (l = recordEvidence(l, { conceptId: 'gluten', kind, correct, detail }))
+  ans('labAction', true)
+  ans('mcq', true, { checkId: 'g1' })
+  ans('freeResponse', false, { checkId: 'g2' })
+  ans('freeResponse', true, { checkId: 'g2' })
+
+  const a = nextAction(l, course)
+  assert.equal(a.type, 'practice')
+  assert.equal(a.seed, 0)
+  assert.deepEqual(a.practice, { type: 'kneading-drill' })
+
+  // Answering it moves on to a different seed: never the same question twice.
+  ans('mcq', false, { checkId: 'p:kneading-drill:0', practice: true })
+  const b = nextAction(l, course)
+  assert.equal(b.type, 'practice')
+  assert.equal(b.seed, 1)
+  assert.equal(practiceSeed(l, 'gluten'), 1)
+})
+
+test('without a generator the policy still falls back to re-asking a check', () => {
+  let l = markExplained(initLearner(bread), 'gluten')
+  for (const [kind, correct, checkId] of [['labAction', true], ['mcq', true, 'g1'], ['freeResponse', false, 'g2'], ['freeResponse', true, 'g2']]) {
+    l = recordEvidence(l, { conceptId: 'gluten', kind, correct, detail: checkId ? { checkId } : null })
+  }
+  assert.equal(nextAction(l, bread).type, 'check')
+})
+
+test('re-explaining after repeated failure picks a layer the learner has not read', () => {
+  let l = markExplained(initLearner(bread), 'gluten', 'intuition')
+  l = recordEvidence(l, { conceptId: 'gluten', kind: 'labAction', correct: false })
+  l = recordEvidence(l, { conceptId: 'gluten', kind: 'mcq', correct: false, detail: { checkId: 'g1' } })
+  const first = nextAction(l, bread)
+  assert.equal(first.type, 'explain')
+  assert.equal(first.scaffold, true)
+  assert.equal(first.layer, 'example')
+
+  l = markExplained(l, 'gluten', 'example')
+  assert.equal(nextAction(l, bread).layer, 'formal')
+})
+
+test('marking an already-seen layer returns the same model, so render-driven calls cannot loop', () => {
+  const l = markExplained(initLearner(bread), 'gluten', 'intuition')
+  assert.equal(markExplained(l, 'gluten', 'intuition'), l)
+  assert.deepEqual(markExplained(l, 'gluten', 'formal').concepts.gluten.layersSeen, ['intuition', 'formal'])
+})
+
+test('exploring a lab counts as having tried it but moves mastery far less than a judgement', () => {
+  const base = markExplained(initLearner(bread), 'gluten')
+  const explored = recordEvidence(base, { conceptId: 'gluten', kind: 'labExplore', correct: true })
+  const judged = recordEvidence(base, { conceptId: 'gluten', kind: 'labAction', correct: true })
+  assert.notEqual(nextAction(explored, bread).type, 'lab')
+  assert.ok(explored.concepts.gluten.mastery < judged.concepts.gluten.mastery - 0.1)
+})
+
+test('validator rejects an option tagged with a misconception the concept does not catalogue', () => {
+  const c = structuredClone(bread)
+  c.concepts[0].checks[0].options[1].misconception = 'not_catalogued'
+  assert.ok(validateCourse(c).some((e) => e.includes('option references unknown misconception')))
+  c.concepts[0].checks[0].options[1].misconception = 'more_kneading_always_better'
+  assert.deepEqual(validateCourse(c), [])
+})
+
+test('a high estimate is not mastery while an authored check has never been answered right', () => {
+  // A lab judgement and one multiple choice can carry the estimate over the bar;
+  // the written question — usually the one that asks why — must still be met.
+  let l = markExplained(initLearner(bread), 'gluten')
+  l = recordEvidence(l, { conceptId: 'gluten', kind: 'labAction', correct: true })
+  l = recordEvidence(l, { conceptId: 'gluten', kind: 'labAction', correct: true })
+  l = recordEvidence(l, { conceptId: 'gluten', kind: 'mcq', correct: true, detail: { checkId: 'g1' } })
+  assert.ok(l.concepts.gluten.mastery >= MASTERY_THRESHOLD)
+  assert.equal(conceptStatus(l, bread, 'gluten'), 'learning')
+  assert.equal(conceptStatus(l, bread, 'fermentation'), 'locked')
+  const a = nextAction(l, bread)
+  assert.equal(a.type, 'check')
+  assert.equal(a.check.id, 'g2')
+  assert.ok(a.why.includes('还有 1 道题'))
+
+  l = recordEvidence(l, { conceptId: 'gluten', kind: 'freeResponse', correct: true, detail: { checkId: 'g2' } })
+  assert.equal(conceptStatus(l, bread, 'gluten'), 'mastered')
 })

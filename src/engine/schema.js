@@ -10,11 +10,17 @@
  * `lab.type`, resolved through the lab registry.
  */
 
-/** Evidence strength by source. Lab actions are worth more than a lucky guess. */
+/**
+ * Evidence strength by source. A judgement in a lab is worth more than a lucky
+ * guess; merely having done something in a lab (dragged a slider past a point,
+ * found a cut by sweeping) shows engagement, not understanding, so it barely
+ * moves the estimate.
+ */
 export const EVIDENCE_WEIGHT = {
   mcq: 0.6,
   freeResponse: 1.0,
   labAction: 1.0,
+  labExplore: 0.3,
   prediction: 0.8,
 }
 
@@ -45,6 +51,10 @@ export function validateCourse(course) {
     need(!ids.has(c.id), `${at}: duplicate id`)
     ids.add(c.id)
     need(typeof c.title === 'string' && c.title, `${at}: title missing`)
+    need(c.chapter === undefined || (typeof c.chapter === 'string' && c.chapter), `${at}: chapter must be a non-empty string`)
+    // Generated practice is how a concept keeps producing fresh questions once
+    // its authored checks are used up; the generator itself is topic code.
+    need(c.practice === undefined || (typeof c.practice?.type === 'string' && c.practice.type), `${at}: practice.type missing`)
     need(Array.isArray(c.objectives) && c.objectives.length > 0, `${at}: needs at least one objective`)
     need(c.explain && typeof c.explain === 'object', `${at}: explain missing`)
     need(typeof c.explain?.intuition === 'string', `${at}: explain.intuition missing`)
@@ -67,6 +77,10 @@ export function validateCourse(course) {
       if (chk.kind === 'mcq') {
         need(Array.isArray(chk.options) && chk.options.length >= 2, `${cat}: mcq needs >= 2 options`)
         need(chk.options?.some((o) => o.correct), `${cat}: mcq has no correct option`)
+        for (const o of chk.options ?? []) {
+          if (o.misconception === undefined) continue
+          need((c.misconceptions ?? []).some((x) => x.id === o.misconception), `${cat}: option references unknown misconception "${o.misconception}"`)
+        }
       } else {
         need(typeof chk.rubric === 'string' && chk.rubric, `${cat}: ${chk.kind} needs a rubric for the grader`)
       }

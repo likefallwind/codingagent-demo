@@ -66,6 +66,7 @@ export function initLearner(course) {
       evidence: [],
       misconceptions: {},
       seenExplain: false,
+      layersSeen: [],
       completedAt: null,
     }
   }
@@ -80,16 +81,39 @@ export function initLearner(course) {
   }
 }
 
+/** Authored checks the learner has not yet answered correctly, in course order. */
+export function openChecks(learner, concept) {
+  const state = learner.concepts[concept.id]
+  const passed = new Set(
+    (state?.evidence ?? []).filter((e) => e.correct && e.detail?.checkId).map((e) => e.detail.checkId),
+  )
+  return (concept.checks ?? []).filter((c) => !passed.has(c.id))
+}
+
+/**
+ * Mastered means two things: the estimate has cleared the bar, and every check
+ * the author wrote has been answered correctly at least once.
+ *
+ * The estimate alone is not enough. A good lab judgement and one lucky multiple
+ * choice can carry it over the bar, and then the written questions — usually
+ * the ones that ask *why* — are never seen. The checks are the author's
+ * statement of what understanding this concept means; the estimate says how
+ * sure we are. Both have to hold.
+ */
+export function isMastered(learner, course, conceptId) {
+  const c = course.concepts.find((x) => x.id === conceptId)
+  const s = learner.concepts[conceptId]
+  return Boolean(c && s && s.mastery >= MASTERY_THRESHOLD && openChecks(learner, c).length === 0)
+}
+
 /** Status of one concept, derived rather than stored so it cannot go stale. */
 export function conceptStatus(learner, course, conceptId) {
   const c = course.concepts.find((x) => x.id === conceptId)
   const s = learner.concepts[conceptId]
   if (!c || !s) return 'locked'
-  const unlocked = (c.prerequisites ?? []).every(
-    (p) => (learner.concepts[p]?.mastery ?? 0) >= MASTERY_THRESHOLD,
-  )
+  const unlocked = (c.prerequisites ?? []).every((p) => isMastered(learner, course, p))
   if (!unlocked) return 'locked'
-  if (s.mastery >= MASTERY_THRESHOLD) return 'mastered'
+  if (isMastered(learner, course, conceptId)) return 'mastered'
   if (s.attempts > 0 || s.seenExplain) return 'learning'
   return 'available'
 }
@@ -151,11 +175,26 @@ export function recordEvidence(learner, obs) {
   }
 }
 
-/** Mark that the learner has read a concept's explanation. */
-export function markExplained(learner, conceptId) {
+/**
+ * Mark that the learner has seen one layer of a concept's explanation.
+ *
+ * The layers are remembered individually so that "explain it differently" can
+ * pick one the learner has not read yet, instead of repeating the one that just
+ * failed to land. Returns the same object when nothing changes, so calling this
+ * from a render-driven effect cannot loop.
+ */
+export function markExplained(learner, conceptId, layer = 'intuition') {
   const prev = learner.concepts[conceptId]
-  if (!prev || prev.seenExplain) return learner
-  return { ...learner, concepts: { ...learner.concepts, [conceptId]: { ...prev, seenExplain: true } } }
+  if (!prev) return learner
+  const seen = prev.layersSeen ?? []
+  if (prev.seenExplain && seen.includes(layer)) return learner
+  return {
+    ...learner,
+    concepts: {
+      ...learner.concepts,
+      [conceptId]: { ...prev, seenExplain: true, layersSeen: seen.includes(layer) ? seen : [...seen, layer] },
+    },
+  }
 }
 
 export function setCurrentConcept(learner, conceptId) {
@@ -181,9 +220,14 @@ export function loadLearner(course) {
     if (!raw) return initLearner(course)
     const saved = JSON.parse(raw)
     if (saved.version !== 1 || saved.courseId !== course.id) return initLearner(course)
-    // Heal against a course that gained concepts since this model was saved.
+    // Heal against a course that gained concepts — or concept fields — since
+    // this model was saved. Merged per concept so an old save picks up new
+    // defaults such as `layersSeen` instead of carrying `undefined`.
     const fresh = initLearner(course)
-    return { ...fresh, ...saved, concepts: { ...fresh.concepts, ...saved.concepts } }
+    const concepts = {}
+    for (const id of Object.keys(fresh.concepts)) concepts[id] = { ...fresh.concepts[id], ...saved.concepts?.[id] }
+    const current = concepts[saved.currentConceptId] ? saved.currentConceptId : fresh.currentConceptId
+    return { ...fresh, ...saved, concepts, currentConceptId: current }
   } catch {
     return initLearner(course)
   }

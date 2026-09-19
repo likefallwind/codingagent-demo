@@ -31,9 +31,17 @@ export default function ConceptNav({ course, learner, statusOf, currentId, onSel
           const active = c.id === currentId
           const mastery = learner.concepts[c.id]?.mastery ?? 0
           const locked = status === 'locked'
+          const needs = (c.prerequisites ?? []).map((p) => course.concepts.find((x) => x.id === p)?.shortTitle ?? p)
+          // A chapter heading wherever the chapter changes, so the advanced
+          // section reads as a branch rather than steps 8-10 of the main line.
+          const heading = c.chapter && c.chapter !== course.concepts[i - 1]?.chapter ? c.chapter : null
           return (
-            <button key={c.id} onClick={() => !locked && onSelect(c.id)} disabled={locked}
-              title={locked ? `需要先掌握：${c.prerequisites.join('、')}` : undefined}
+            <React.Fragment key={c.id}>
+            {heading && (
+              <div style={{ fontSize: 11.5, color: 'var(--muted-light)', padding: i ? '12px 6px 4px' : '0 6px 4px' }}>{heading}</div>
+            )}
+            <button data-concept={c.id} data-status={status} onClick={() => !locked && onSelect(c.id)} disabled={locked}
+              title={locked ? `需要先掌握：${needs.join('、')}` : undefined}
               style={{
                 display: 'flex', alignItems: 'flex-start', gap: 9, padding: '9px 10px',
                 borderRadius: 9, border: 'none', textAlign: 'left',
@@ -66,11 +74,12 @@ export default function ConceptNav({ course, learner, statusOf, currentId, onSel
                 )}
                 {locked && (
                   <span style={{ display: 'block', fontSize: 11, color: 'var(--muted-light)', marginTop: 3 }}>
-                    未解锁
+                    先掌握「{needs.join('、')}」
                   </span>
                 )}
               </span>
             </button>
+            </React.Fragment>
           )
         })}
       </nav>
@@ -80,7 +89,7 @@ export default function ConceptNav({ course, learner, statusOf, currentId, onSel
         borderTop: '1px solid var(--border-soft)', padding: '14px 4px 18px',
         fontSize: 11.5, color: 'var(--muted-light)', lineHeight: 1.7,
       }}>
-        概念达到 {Math.round(MASTERY_THRESHOLD * 100)}% 掌握度才会解锁下一个。
+        掌握度到 {Math.round(MASTERY_THRESHOLD * 100)}%、这一步的每道题都做对过，才会解锁下一个。
         进度保存在本机浏览器里。
       </div>
     </aside>

@@ -95,7 +95,7 @@ export async function chat(messages, { model = MODELS.interactive, maxTokens = 2
  * prompt plus `validate` is the only guarantee we get. On a parse or validation
  * failure the model is asked once more with the failure quoted back to it.
  */
-export async function chatJSON(messages, { schemaHint, validate, model = MODELS.interactive, maxTokens = 3000, temperature = 0.2, signal } = {}) {
+export async function chatJSON(messages, { schemaHint, validate, repair, model = MODELS.interactive, maxTokens = 3000, temperature = 0.2, signal } = {}) {
   const system = {
     role: 'system',
     content:
@@ -129,8 +129,13 @@ export async function chatJSON(messages, { schemaHint, validate, model = MODELS.
   parsed = parseJSONReply(text)
   if (!parsed.ok) throw new Error(`Minimax did not return JSON after retry: ${parsed.error}`)
   problem = validate?.(parsed.value)
-  if (problem) throw new Error(`Minimax JSON failed validation after retry: ${problem}`)
-  return parsed.value
+  if (!problem) return parsed.value
+  // Last resort before failing: a caller-supplied mechanical fix (say, cutting
+  // an over-long reply back to whole sentences), accepted only if the result
+  // then passes the same validation.
+  const repaired = repair?.(parsed.value)
+  if (repaired && !validate?.(repaired)) return repaired
+  throw new Error(`Minimax JSON failed validation after retry: ${problem}`)
 }
 
 /**
