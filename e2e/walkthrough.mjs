@@ -1,159 +1,45 @@
 /**
- * Walk the whole decision-tree course in a real browser, twice.
+ * Walk the whole course in a real browser, twice.
  *
- *   good — every lab action right, every answer right the first time
+ *   good — every lab judgement right, every answer right the first time
  *   bad  — every lab judgement wrong first, every question answered wrong
- *          first; plus asking the tutor a question and for a hint on every step
+ *          first, the first verification of every step failed; plus asking the
+ *          tutor a question and for a hint on every step
  *
- * then a short third run for the tutor's unprompted remarks (stalls). It fails on
- * the things a learner would hit and the unit tests cannot see:
+ * It fails on what a learner would hit and the unit tests cannot see:
  *
- *   - a dead end: a concept that is not mastered but offers nothing to answer
- *   - the same question put in front of the learner more than twice
- *   - a number in anything the tutor said that is neither in the course text nor
- *     on the learner's screen
+ *   - a dead end: a step not done, and nothing on screen to answer
+ *   - the all-correct path skipping the unseen-instance verification (AC-04)
+ *   - a verification instance issued twice, or one that was already met as
+ *     practice; the same question put in front of the learner more than twice
  *   - a tutor request that does not carry the learner's screen
- *   - a remark the lab should have prompted that never appeared
+ *   - (with the real model) a number the tutor said that is neither in the
+ *     course text nor on the learner's screen
  *   - console errors
  *
- * It talks to the real model, so it needs MINIMAX_API_KEY and takes minutes.
- * Usage: npm run e2e            (builds, starts its own server on a free port)
- *        BASE_URL=http://localhost:5173 npm run e2e   (against a running app)
- *        E2E_PATHS=good npm run e2e                   (one path only)
+ * Usage: npm run e2e:walk                       (fake tutor, own server)
+ *        E2E_REAL_LLM=1 npm run e2e:walk        (real model, needs MINIMAX_API_KEY)
+ *        E2E_PATHS=good npm run e2e:walk        (one path only)
  */
 
 import { chromium } from 'playwright'
-import { spawn, execSync } from 'node:child_process'
-import net from 'node:net'
-import { fileURLToPath } from 'node:url'
-import { courseList } from '../src/courses/index.js'
-import { resolvePractice } from '../src/labs/practice.js'
 import { unknownQuantities } from '../server/factcheck.js'
+import {
+  ROOT, REAL, course, startServer, newPage, card, setRange, readStore, tutorSettled, statusOf, tutorMessages,
+  questionFor, openVerifyItems, written, submitWritten, Log, report,
+} from './lib.mjs'
 
-const ROOT = fileURLToPath(new URL('..', import.meta.url))
-const course = courseList.find((c) => c.id === 'decision-tree')
-const PATHS = (process.env.E2E_PATHS ?? 'good,bad,idle').split(',')
-
-/**
- * Reference answers for the written questions: `good` in order of preference
- * (a second, fuller phrasing in case the grader wants more), `bad` holding the
- * concept's catalogued misconception where there is one.
- */
-const ANSWERS = {
-  'rt-2': {
-    good: ['继续分确实能让训练集全对，但那一刀只是为了照顾那 1 个苹果，学到的是这批数据的偶然性而不是规律，会过拟合，到新数据上泛化反而变差。'],
-    bad: '叶子必须是纯的才算建好，混着的叶子说明树还没建完，应该继续往下分。',
-  },
-  'pu-3': {
-    good: ['不能删。果香在根节点上增益低，但特征的价值取决于它作用在哪批样本上：果皮切开之后，右边那 9 个样本里「无果香」一刀就能分干净，算法建树时会在子节点选它。'],
-    bad: '可以删，它的增益最低，说明这个特征没用。',
-  },
-  'gr-1': {
-    good: ['不能完全补回来。第一刀决定了两个子问题各自面对哪些样本，后面只能在这个划分内部做局部优化，贪心算法也从不回头修改第一刀。'],
-    bad: '能补回来，后面每一步都选最好的，最后整棵树还是最优的。',
-  },
-  'dc-2': {
-    good: ['训练误差会继续下降，从 6.3% 降到 2.9%；验证误差反而会上升，从 10.0% 升到 13.3%。'],
-    bad: '两个都会下降，树越深越准。',
-  },
-  'of-2': {
-    good: ['不能这么下结论。验证集只有 60 个样本，一个样本就是 1.67 个百分点，这点差异在噪声范围内，应该看整体趋势，或者用交叉验证。'],
-    bad: '是的，depth 2 的验证误差更低，所以 depth 2 更好。',
-  },
-  'pr-2': {
-    good: ['剪过头会欠拟合：模型容量不足以表达真实规律。比如 min_samples_leaf 调到 12 时，验证误差从 10.0% 恶化到 16.7%。'],
-    bad: '树越小越好，应该尽量把 min_samples_leaf 调大。',
-  },
-  'in-2': {
-    good: ['越深的节点里样本越少，几个样本的偶然波动就能改变哪一刀胜出；而且上面一刀一变，下面整棵子树都跟着变，所以方差大。'],
-    bad: '不会变大，算法是确定的，同样的设置总会得到同一棵树。',
-  },
-  'eg-2': {
-    good: ['熵是 0。因为这个分支是纯的，4 天全都打球，只有一个类别，没有任何不确定性。'],
-    bad: '熵是 1，因为这个分支有 4 天。',
-  },
-  'mv-2': {
-    good: ['它只是把 14 行一行一行记住了。遇到没见过的新一天（比如 D15），它找不到这个编号，没法根据天气做出任何有依据的预测，没有学到能泛化的规律。'],
-    bad: '因为它过拟合了。',
-  },
-  'grl-2': {
-    good: ['要靠结构性的判断：检测那些分支几乎全是单个样本的特征并拒绝它，比如要求每个分支平均至少 2 个样本；或者一开始就不把行号这种标识符列当作特征。'],
-    bad: '换成增益率就能挡住它。',
-  },
-}
+const PATHS = (process.env.E2E_PATHS ?? 'good,bad').split(',')
 
 /** A remark each lab should prompt, found by a phrase in its text. */
 const MOMENTS = {
   'depth-explorer': '拖过了',
-  'prune-explorer': '剪到了',
+  'prune-explorer': '剪',
   'instability-explorer': '已经摘了',
   'entropy-explorer': '各 7 天',
   'id-trap-explorer': '改了',
   'gain-ratio-explorer': '出局',
 }
-
-// --- server -------------------------------------------------------------------
-
-function freePort() {
-  return new Promise((resolve) => {
-    const srv = net.createServer()
-    srv.listen(0, () => {
-      const { port } = srv.address()
-      srv.close(() => resolve(port))
-    })
-  })
-}
-
-async function startServer() {
-  if (process.env.BASE_URL) return { base: process.env.BASE_URL, stop: () => {} }
-  execSync('npx vite build', { cwd: ROOT, stdio: 'ignore' })
-  const port = await freePort()
-  const proc = spawn(process.execPath, ['server/index.js'], { cwd: ROOT, env: { ...process.env, PORT: String(port) }, stdio: 'ignore' })
-  const base = `http://localhost:${port}`
-  for (let i = 0; i < 50; i++) {
-    try {
-      const r = await fetch(`${base}/api/health`)
-      if (r.ok) {
-        const h = await r.json()
-        if (!h.hasKey) throw new Error('MINIMAX_API_KEY is not set — the walkthrough exercises the real tutor')
-        return { base, stop: () => proc.kill() }
-      }
-    } catch (e) {
-      if (e.message.includes('MINIMAX')) { proc.kill(); throw e }
-    }
-    await new Promise((r) => setTimeout(r, 200))
-  }
-  proc.kill()
-  throw new Error('server did not start')
-}
-
-// --- page helpers ---------------------------------------------------------------
-
-const card = (page, title) => page.locator('.panel', { hasText: title }).first()
-
-/** Move a range input the way a drag does: React listens for native input events. */
-async function setRange(page, label, value) {
-  await page.locator(`input[type=range][aria-label="${label}"]`).evaluate((el, v) => {
-    const set = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set
-    set.call(el, String(v))
-    el.dispatchEvent(new Event('input', { bubbles: true }))
-  }, value)
-  await page.waitForTimeout(60)
-}
-
-/** Wait until nothing in the tutor panel is still being written. */
-async function tutorSettled(page, timeout = 90000) {
-  await page.waitForTimeout(250)
-  await page.waitForFunction(() => !document.querySelector('[data-streaming="1"]'), null, { timeout })
-}
-
-const statusOf = (page, id) => page.getAttribute(`[data-concept="${id}"]`, 'data-status')
-
-async function tutorMessages(page) {
-  return page.$$eval('[data-tag]', (els) => els.map((e) => ({ tag: e.dataset.tag, text: e.innerText })))
-}
-
-// --- lab drivers ------------------------------------------------------------------
 
 const labDrivers = {
   'tree-reader': async (page, mode) => {
@@ -173,7 +59,7 @@ const labDrivers = {
     if (mode === 'bad') {
       await card(page, '第一刀：你要问哪个问题？').getByRole('button', { name: /^果香/ }).click()
       await tutorSettled(page)
-      await page.getByRole('button', { name: '重新开始' }).click()
+      await page.getByRole('button', { name: '重新开始' }).first().click()
     }
     await card(page, '第一刀：你要问哪个问题？').getByRole('button', { name: /^果皮厚度/ }).click()
     await card(page, '第二刀').getByRole('button', { name: /^果香/ }).click()
@@ -182,25 +68,29 @@ const labDrivers = {
     await card(page, '先预测').getByRole('button', { name: mode === 'bad' ? '256 个（2⁸）' : '大约 40 个' }).click()
     await setRange(page, 'max_depth', 6)
     if (mode === 'bad') {
-      // Drag back and forth: the tutor should notice the searching.
+      // Back and forth: the tutor may offer to help, and must not claim anything.
       for (const d of [3, 6, 3, 6, 3, 6, 3]) await setRange(page, 'max_depth', d)
       try {
-        await page.locator('[data-tag="nudge"]', { hasText: '来回拖' }).waitFor({ timeout: 25000 })
-        log.note('thrash nudge appeared')
+        const n = page.locator('[data-tag="nudge"]', { hasText: '在比较' })
+        await n.waitFor({ timeout: 25000 })
+        log.note('comparing invitation appeared')
+        const text = await n.innerText()
+        if (/卡住|误解|不懂/.test(text)) log.fail(`the invitation claims something about the learner: ${text}`)
       } catch {
-        log.fail('dragging max_depth back and forth never drew the "来回拖" remark')
+        log.fail('dragging max_depth back and forth never drew an invitation')
       }
     }
   },
   'curve-explorer': async (page, mode) => {
-    await page.locator(`[data-depth="${mode === 'bad' ? 8 : 5}"] rect`).click()
+    await page.locator(`[data-depth="${mode === 'bad' ? 8 : 5}"] rect`).first().click()
   },
   'prune-explorer': async (page, mode) => {
     if (mode === 'bad') {
       await setRange(page, 'min_samples_leaf', 12)
-      await tutorSettled(page)
+      await page.waitForTimeout(300)
     }
     await setRange(page, 'min_samples_leaf', 4)
+    await page.locator('[data-testid="adopt-setting"]').click()
     const quiz = card(page, '小测验：新来一个水果')
     if (mode === 'bad') {
       await quiz.getByRole('button', { name: '是', exact: true }).click()
@@ -230,53 +120,49 @@ const labDrivers = {
   },
 }
 
-// --- questions ------------------------------------------------------------------------
+const isDone = (s) => s === 'verified' || s === 'transfer' || s === 'done'
 
-/**
- * Submit a written answer and wait for the verdict. A grader failure shows the
- * learner a retry button and scores nothing; the walkthrough uses that button
- * once, as a learner would, and only gives up if the retry fails too.
- */
-async function submitWritten(el, text, log) {
-  await el.locator('textarea').fill(text)
-  await el.getByRole('button', { name: /^(提交|重新提交)$/ }).click()
-  const accepted = el.getByRole('button', { name: '继续', exact: true })
-  const resubmit = el.getByRole('button', { name: '重新提交' })
-  const failed = el.getByText('没能批改')
-  for (let attempt = 0; attempt < 2; attempt++) {
-    await Promise.race([
-      accepted.waitFor({ timeout: 90000 }),
-      resubmit.waitFor({ timeout: 90000 }),
-      failed.waitFor({ timeout: 90000 }),
-    ])
-    if (!(await failed.count())) return (await accepted.count()) > 0
-    log.note('the grader failed once; the retry button was used')
-    await el.getByRole('button', { name: '重试' }).click()
-    await failed.waitFor({ state: 'detached', timeout: 5000 }).catch(() => {})
-  }
-  throw new Error('grader failed twice in a row')
-}
-
-/** Answer whatever the page asks until the concept is mastered. */
-async function answerUntilMastered(page, concept, mode, log) {
+/** Answer whatever the step asks — questions and verifications — until it is done. */
+async function workUntilDone(page, concept, mode, log) {
   const presented = new Map()
   const wrongDone = new Set()
-  // The bad path errs on every authored question and on the first generated
-  // one. Erring on every generated question too would describe a learner who
-  // never learns — mastery settles around 0.7 and correctly never unlocks.
   let practiceMistakes = 0
-  for (let step = 0; step < 30; step++) {
-    if ((await statusOf(page, concept.id)) === 'mastered') return presented
+  let verifyRounds = 0
+  let sawVerifyBeforeDone = false
+  for (let step = 0; step < 45; step++) {
+    if (isDone(await statusOf(page, concept.id))) break
+
+    const verify = page.locator('[data-testid="verify-card"]')
+    if (await verify.count()) {
+      sawVerifyBeforeDone = true
+      const cont = verify.getByRole('button', { name: '继续', exact: true })
+      if (await cont.count()) { await cont.click(); await page.waitForTimeout(150); continue }
+      const start = page.locator('[data-testid="verify-start"]')
+      if (await start.count()) { await start.click(); await page.waitForTimeout(200) }
+      const open = await openVerifyItems(page, concept)
+      if (!open) { log.fail('verification card on screen, but no open verification on record'); break }
+      verifyRounds++
+      const failFirst = mode === 'bad' && verifyRounds === 1
+      for (const it of open.items) {
+        const right = it.q.options.findIndex((o) => o.correct)
+        const pick = failFirst && it.index === 0 ? it.q.options.findIndex((o) => !o.correct) : right
+        await page.locator(`[data-verify-item="${it.index}"] [data-option="${pick}"]`).click()
+      }
+      await page.locator('[data-testid="verify-submit"]').click()
+      await page.waitForTimeout(200)
+      continue
+    }
+
     const el = page.locator('[data-check-id]').first()
     if (!(await el.count())) {
-      log.fail(`dead end: not mastered, and no question on screen (policy says: ${await page.textContent('[data-testid="policy-why"]')})`)
-      return presented
+      log.fail(`dead end: not done, and nothing to answer (policy: ${(await page.textContent('[data-testid="policy-why"]'))?.replace(/\s+/g, ' ')})`)
+      return { presented, verifyRounds, sawVerifyBeforeDone }
     }
     const id = await el.getAttribute('data-check-id')
     const kind = await el.getAttribute('data-check-kind')
     presented.set(id, (presented.get(id) ?? 0) + 1)
-    const check = concept.checks.find((c) => c.id === id) ?? resolvePractice(concept, id)
-    if (!check) { log.fail(`question ${id} is neither authored nor a resolvable practice id`); return presented }
+    const check = questionFor(concept, id)
+    if (!check) { log.fail(`question ${id} is neither authored nor rebuildable`); break }
 
     if (kind === 'mcq') {
       const right = check.options.findIndex((o) => o.correct)
@@ -289,163 +175,134 @@ async function answerUntilMastered(page, concept, mode, log) {
       }
       await el.locator(`[data-option="${right}"]`).click()
     } else {
-      const a = ANSWERS[id]
-      if (!a) { log.fail(`no reference answer for written question ${id}`); return presented }
+      if (!written(id, 'good')) { log.fail(`no reference answer for ${id}`); break }
       if (mode === 'bad' && !wrongDone.has(id)) {
         wrongDone.add(id)
-        if (await submitWritten(el, a.bad, log)) log.fail(`grader accepted the wrong answer to ${id}: "${a.bad}"`)
+        if (await submitWritten(el, written(id, 'bad'))) log.fail(`the grader accepted the wrong answer to ${id}`)
         await tutorSettled(page)
       }
-      let ok = false
-      for (const text of a.good) {
-        ok = await submitWritten(el, text, log)
-        if (ok) break
+      if (!(await submitWritten(el, written(id, 'good')))) {
+        const status = await el.locator('[data-testid="grading-status"]').getAttribute('data-status').catch(() => '')
+        log.fail(`the grader did not accept the reference answer to ${id} (${status || 'rejected'})`)
+        break
       }
-      if (!ok) { log.fail(`grader rejected every reference answer to ${id}`); return presented }
     }
     await el.getByRole('button', { name: '继续', exact: true }).click()
     await page.waitForTimeout(150)
   }
-  log.fail('dead end: 30 questions without reaching mastery')
-  return presented
+  return { presented, verifyRounds, sawVerifyBeforeDone }
 }
 
-// --- one run through the course ---------------------------------------------------------
-
 async function run(browser, base, mode) {
-  const ctx = await browser.newContext({ viewport: { width: 1460, height: 1000 } })
-  const page = await ctx.newPage()
-  const errors = []
-  const requests = []
-  // A failed fetch also logs a bare "Failed to load resource" line; the request
-  // that failed is reported by the check that made it, with its reason.
-  page.on('console', (m) => { if (m.type() === 'error' && !m.text().startsWith('Failed to load resource')) errors.push(m.text()) })
-  page.on('pageerror', (e) => errors.push(e.message))
-  page.on('request', (r) => {
-    if (!r.url().includes('/api/tutor/')) return
-    try { requests.push({ path: new URL(r.url()).pathname, body: JSON.parse(r.postData() ?? '{}') }) } catch { /* ignore */ }
-  })
-
-  await page.goto(base)
-  await page.waitForSelector('[data-testid="tutor-sees"]')
-  const results = []
+  const { page, ctx, errors, requests } = await newPage(browser, base)
+  const logs = []
 
   for (const concept of course.concepts) {
+    const log = new Log(concept.id)
     const t0 = Date.now()
-    const findings = []
-    const notes = []
-    const log = { fail: (m) => findings.push(m), note: (m) => notes.push(m) }
     const reqStart = requests.length
-
-    if ((await statusOf(page, concept.id)) === 'locked') {
-      log.fail('still locked when its turn came')
-      results.push({ concept: concept.id, findings, notes, secs: 0 })
-      continue
-    }
-    await page.click(`[data-concept="${concept.id}"]`)
-    await page.waitForTimeout(200)
-
     try {
+      const dialog = page.locator('[role="dialog"]')
+      if (await dialog.count()) log.fail(`a dialog was left open: ${(await dialog.first().innerText()).slice(0, 80)}`)
+      await page.click(`[data-concept="${concept.id}"]`, { timeout: 10000 })
+      await page.waitForTimeout(200)
       await labDrivers[concept.lab.type](page, mode, log)
       await tutorSettled(page)
 
       const want = MOMENTS[concept.lab.type]
       if (want) {
         try {
-          await page.locator('[data-tag="nudge"]', { hasText: want }).waitFor({ timeout: 20000 })
-          notes.push('moment remark appeared')
+          await page.locator('[data-tag="moment"]', { hasText: want }).first().waitFor({ timeout: 20000 })
+          log.note('moment remark')
         } catch {
           log.fail(`the lab never prompted its "${want}" remark`)
         }
       }
-
       const sees = await page.textContent('[data-testid="tutor-sees"]')
       if (!sees || sees.includes('的讲解')) log.fail(`after working in the lab the tutor still says: ${sees}`)
 
       if (mode === 'bad') {
-        // Ask a question and ask for a hint, while looking at the lab.
         await page.locator('[data-testid="lab"]').click({ position: { x: 5, y: 5 } })
-        const suggestion = page.locator('aside button', { hasText: concept.suggestions[0] })
-        await suggestion.click()
+        await page.locator('aside button', { hasText: concept.suggestions[0] }).click()
         await tutorSettled(page)
-        await page.locator('aside button', { hasText: '给我一个提示' }).first().click()
+        await page.locator('[data-testid="hint"]').click()
         await tutorSettled(page)
         const msgs = await tutorMessages(page)
-        if (!msgs.some((m) => m.tag === 'answer' && m.text.length > 10)) log.fail('asked a question, got no answer')
-        if (!msgs.some((m) => m.tag === 'hint' && m.text.length > 10)) log.fail('asked for a hint, got none')
+        log.check(msgs.some((m) => m.tag === 'answer' && m.text.length > 10), 'asked a question, got no answer')
+        log.check(msgs.some((m) => m.tag === 'hint' && m.text.length > 10), 'asked for a hint, got none')
       }
 
-      const presented = await answerUntilMastered(page, concept, mode, log)
+      const { presented, verifyRounds, sawVerifyBeforeDone } = await workUntilDone(page, concept, mode, log)
+      if (mode === 'bad') {
+        // Every submitted mistake gets its explanation, and none is cut off by
+        // the click that made the mistake also moving the focus.
+        await tutorSettled(page)
+        const alerts = (await tutorMessages(page)).filter((m) => m.tag.startsWith('alert'))
+        log.check(alerts.length > 0, 'no explanation after a submitted mistake')
+        log.check(!alerts.some((m) => m.text.includes('没有继续')), 'an explanation after a mistake was cut off')
+      }
       for (const [id, n] of presented) if (n > 2) log.fail(`question ${id} was put in front of the learner ${n} times`)
-      await tutorSettled(page)
+      if (concept.verify) {
+        log.check(sawVerifyBeforeDone && verifyRounds >= 1, 'the step was done without an unseen-instance verification (AC-04)')
+        if (mode === 'bad') log.check(verifyRounds >= 2, `a failed verification should need a second, fresh round (rounds: ${verifyRounds})`)
+      }
 
-      // Everything the tutor said on this step, checked against what it was allowed to know.
-      const mine = requests.slice(reqStart)
-      for (const r of mine) {
+      // No verification instance is ever issued twice, or after being met as practice.
+      const store = await readStore(page)
+      const mine = Object.values(store.attempts).filter((a) => a.conceptId === concept.id)
+      const verifyParts = mine.filter((a) => a.activity === 'verify').flatMap((a) => a.parts ?? [])
+      log.check(new Set(verifyParts).size === verifyParts.length, 'a verification question was issued twice')
+      const practiceKeys = new Set(mine.filter((a) => a.activity === 'practice').map((a) => a.instanceKey))
+      log.check(!verifyParts.some((k) => practiceKeys.has(k)), 'a verification question had already been met as practice')
+      const js = store.judgements.filter((j) => j.conceptId === concept.id)
+      const pass = js.find((j) => j.activity === 'verify' && j.correct && j.independent)
+      if (concept.verify) log.check(pass, 'no independent verification pass on record')
+      if (mode === 'bad' && concept.verify) {
+        log.check(js.some((j) => j.activity === 'verify' && j.correct === false), 'the failed verification is not on record')
+      }
+
+      // Every tutor request carried the screen and the task.
+      for (const r of requests.slice(reqStart).filter((x) => x.path.startsWith('/api/tutor/'))) {
         if (!r.body.screen) log.fail(`${r.path} was sent without the learner's screen`)
-        if ((r.path.endsWith('/ask') || r.path.endsWith('/hint')) && r.body.screen?.focus === 'lab' && !r.body.screen?.doing) {
-          log.fail(`${r.path} said the learner was in the lab but carried nothing the lab showed`)
+        if (!r.body.contextKey) log.fail(`${r.path} was sent without its task context`)
+      }
+
+      if (REAL) {
+        const allowed = [
+          concept.explain.intuition, concept.explain.example, concept.explain.formal,
+          ...(concept.misconceptions ?? []).map((m) => m.correction),
+          ...(concept.checks ?? []).flatMap((c) => [c.prompt, c.explain, c.rubric, ...(c.options ?? []).map((o) => o.text)]),
+          ...[...presented.keys()].map((id) => questionFor(concept, id)).filter((q) => q?.generated)
+            .flatMap((g) => [g.prompt, g.explain, ...g.options.map((o) => o.text), ...(g.table?.rows ?? []).map((r) => r.join(' ')), ...(g.facts ?? [])]),
+          ...requests.slice(reqStart).flatMap((r) => [
+            r.body.screen?.doing, ...(r.body.screen?.facts ?? []), r.body.screen?.check?.prompt,
+            ...(r.body.screen?.check?.table ?? []), ...(r.body.action?.facts ?? []), r.body.action?.description,
+            r.body.answer, r.body.question, ...(r.body.history ?? []).map((m) => m.text),
+            ...(r.body.screen?.previous ?? []).flatMap((p) => [p.doing, ...p.facts]),
+          ]),
+        ].filter(Boolean).join('\n')
+        for (const m of await tutorMessages(page)) {
+          const bad = unknownQuantities(m.text, allowed)
+          if (bad.length) log.fail(`tutor (${m.tag}) cited ${bad.map((q) => q.raw).join('、')}: "${m.text.slice(0, 100)}"`)
         }
       }
-      const generated = [...presented.keys()].map((id) => resolvePractice(concept, id)).filter(Boolean)
-      const allowed = [
-        concept.explain.intuition, concept.explain.example, concept.explain.formal,
-        ...(concept.misconceptions ?? []).map((m) => m.correction),
-        ...(concept.checks ?? []).flatMap((c) => [c.prompt, c.explain, c.rubric, ...(c.options ?? []).map((o) => o.text)]),
-        ...generated.flatMap((g) => [g.prompt, g.explain, ...g.options.map((o) => o.text), ...(g.table?.rows ?? []).map((r) => r.join(' ')), ...(g.facts ?? [])]),
-        ...mine.flatMap((r) => [
-          r.body.screen?.doing, ...(r.body.screen?.facts ?? []), r.body.screen?.check?.prompt,
-          ...(r.body.screen?.check?.table ?? []), ...(r.body.action?.facts ?? []), r.body.action?.description,
-          r.body.answer, r.body.question,
-        ]),
-      ].filter(Boolean).join('\n')
-      const msgs = await tutorMessages(page)
-      for (const m of msgs) {
-        const bad = unknownQuantities(m.text, allowed)
-        if (bad.length) log.fail(`tutor (${m.tag}) cited ${bad.map((q) => q.raw).join('、')} — on neither the screen nor the page: "${m.text.slice(0, 120)}"`)
-        if (/没能回应/.test(m.text)) log.fail(`tutor failed: ${m.text.slice(0, 120)}`)
-      }
-      notes.push(`${msgs.length} tutor messages, ${mine.length} tutor requests, questions: ${[...presented].map(([id, n]) => (n > 1 ? `${id}×${n}` : id)).join(' ')}`)
+      log.note(`${presented.size} questions, ${verifyRounds} verification round(s), ${Math.round((Date.now() - t0) / 1000)} s`)
     } catch (err) {
       log.fail(`crashed: ${err.message.split('\n')[0]}`)
       await page.screenshot({ path: `${ROOT}/e2e/failure-${mode}-${concept.id}.png` }).catch(() => {})
     }
-
-    if ((await statusOf(page, concept.id)) !== 'mastered') log.fail('not mastered at the end of its turn')
-    results.push({ concept: concept.id, findings, notes, secs: Math.round((Date.now() - t0) / 1000) })
+    log.check(isDone(await statusOf(page, concept.id)), `not done at the end of its turn (${await statusOf(page, concept.id)})`)
+    logs.push(log)
   }
 
-  if (errors.length) results.push({ concept: '(console)', findings: [...new Set(errors)].map((e) => `console error: ${e}`), notes: [], secs: 0 })
+  const summary = new Log('(course)')
+  const header = await page.textContent('[data-testid="open-profile"]')
+  summary.check(/已独立验证\s*9\s*\/\s*9/.test(header ?? ''), `header should show all 9 verifiable capabilities verified: ${header}`)
+  if (errors.length) for (const e of [...new Set(errors)]) summary.fail(`console error: ${e}`)
+  logs.push(summary)
   await ctx.close()
-  return results
+  return logs
 }
-
-/** A learner who starts, then stops: the tutor should offer help, once, and deliver it. */
-async function idleRun(browser, base) {
-  const ctx = await browser.newContext({ viewport: { width: 1460, height: 1000 } })
-  const page = await ctx.newPage()
-  const findings = []
-  await page.goto(`${base}/?idle=4`)
-  await page.waitForSelector('[data-testid="tutor-sees"]')
-  await page.locator('main').click({ position: { x: 30, y: 30 } })
-  try {
-    const n = page.locator('[data-tag="nudge"]', { hasText: '停了一会儿' })
-    await n.waitFor({ timeout: 15000 })
-    await n.getByRole('button', { name: '给我一个提示' }).click()
-    await tutorSettled(page)
-    const msgs = await tutorMessages(page)
-    if (!msgs.some((m) => m.tag === 'hint' && m.text.length > 10)) findings.push('the stall remark offered a hint that never arrived')
-    await page.waitForTimeout(9000)
-    const again = await page.locator('[data-tag="nudge"]', { hasText: '停了一会儿' }).count()
-    if (again > 1) findings.push('the stall remark repeated without any new activity')
-  } catch (err) {
-    findings.push(`no stall remark after 4 s of inactivity (${err.message.split('\n')[0]})`)
-  }
-  await ctx.close()
-  return [{ concept: '(stall)', findings, notes: [], secs: 0 }]
-}
-
-// --- main ---------------------------------------------------------------------------------
 
 const { base, stop } = await startServer()
 const browser = await chromium.launch()
@@ -453,14 +310,9 @@ let failed = 0
 try {
   for (const mode of PATHS) {
     const t0 = Date.now()
-    const results = mode === 'idle' ? await idleRun(browser, base) : await run(browser, base, mode)
-    console.log(`\n=== ${mode} path (${Math.round((Date.now() - t0) / 1000)} s)`)
-    for (const r of results) {
-      const mark = r.findings.length ? '✗' : '✓'
-      console.log(`${mark} ${r.concept}${r.secs ? ` (${r.secs} s)` : ''}${r.notes.length ? ` — ${r.notes.join('; ')}` : ''}`)
-      for (const f of r.findings) console.log(`    - ${f}`)
-      failed += r.findings.length
-    }
+    const logs = await run(browser, base, mode)
+    console.log(`\n=== ${mode} path (${Math.round((Date.now() - t0) / 1000)} s, ${REAL ? 'real model' : 'fake tutor'})`)
+    failed += report(logs)
   }
 } finally {
   await browser.close()

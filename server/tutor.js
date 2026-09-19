@@ -35,36 +35,85 @@ const strs = (v, n, max) => (Array.isArray(v) ? v.filter((x) => typeof x === 'st
 export function cleanScreen(raw) {
   if (!raw || typeof raw !== 'object') return null
   const c = raw.check && typeof raw.check === 'object' ? raw.check : null
+  const code = raw.code && typeof raw.code === 'object' ? raw.code : null
+  const task = raw.task && typeof raw.task === 'object' ? raw.task : null
   return {
-    focus: ['lab', 'check', 'explain'].includes(raw.focus) ? raw.focus : 'explain',
+    focus: ['lab', 'check', 'explain', 'verify', 'project'].includes(raw.focus) ? raw.focus : 'explain',
     doing: str(raw.doing, 200),
     facts: strs(raw.facts, 40, 240),
+    // Earlier states of the same task, oldest first, so "why did that change?"
+    // can be answered about the right two results.
+    previous: Array.isArray(raw.previous)
+      ? raw.previous.slice(-3).filter((p) => p && typeof p === 'object')
+        .map((p) => ({ doing: str(p.doing, 200), facts: strs(p.facts, 20, 240), ago: Number.isFinite(p.ago) ? Math.max(0, Math.round(p.ago)) : null }))
+      : [],
     check: c ? {
       id: str(c.id, 80),
       kind: str(c.kind, 20),
       prompt: str(c.prompt, 400),
       table: strs(c.table, 12, 200),
+      diagram: strs(c.diagram, 12, 200),
       eliminated: strs(c.eliminated, 6, 200),
       draft: str(c.draft, 400),
     } : null,
+    code: code ? {
+      version: str(code.version, 40),
+      text: str(code.text, 4000),
+      error: str(code.error, 800),
+      output: str(code.output, 1200),
+    } : null,
+    task: task ? {
+      label: str(task.label, 120),
+      activity: str(task.activity, 30),
+      attempt: str(task.attempt, 60),
+      capability: str(task.capability, 80),
+      capabilityStatus: str(task.capabilityStatus, 40),
+      helpSoFar: strs(task.helpSoFar, 6, 120),
+    } : null,
   }
+}
+
+/** Earlier turns of the same task's conversation, bounded, as chat messages. */
+export function cleanHistory(raw) {
+  if (!Array.isArray(raw)) return []
+  return raw
+    .filter((m) => m && (m.role === 'user' || m.role === 'tutor') && typeof m.text === 'string' && m.text.trim())
+    .slice(-12)
+    .map((m) => ({ role: m.role === 'user' ? 'user' : 'assistant', content: m.text.slice(0, 600) }))
 }
 
 function screenLines(screen) {
   if (!screen) return []
   const lines = []
-  const where = { lab: '实验', check: '题目', explain: '讲解' }[screen.focus]
+  const where = { lab: '实验', check: '题目', explain: '讲解', verify: '独立验证', project: '项目代码' }[screen.focus]
   lines.push(`学生此刻的注意力在：${where}`)
-  if (screen.doing) lines.push(`学生在实验里：${screen.doing}`)
+  if (screen.task?.label) {
+    lines.push(`当前任务：${screen.task.label}${screen.task.attempt ? `（${screen.task.attempt}）` : ''}`)
+    if (screen.task.capability) lines.push(`这项任务对应的能力：${screen.task.capability}${screen.task.capabilityStatus ? `，目前：${screen.task.capabilityStatus}` : ''}`)
+    if (screen.task.helpSoFar?.length) lines.push(`这项任务里已经给过的帮助：${screen.task.helpSoFar.join('；')}`)
+  }
+  if (screen.doing) lines.push(`学生在做：${screen.doing}`)
   if (screen.facts.length) {
-    lines.push('实验界面上此刻显示的数字（系统精确计算，可以直接引用）：')
+    lines.push('界面上此刻显示的数字（系统精确计算，可以直接引用）：')
     for (const f of screen.facts) lines.push(`- ${f}`)
+  }
+  if (screen.previous?.length) {
+    lines.push('同一个任务里，之前显示过的状态（从早到晚；学生说「刚才」「之前」时指的是这些）：')
+    for (const p of screen.previous) {
+      lines.push(`- ${p.ago !== null ? `${p.ago} 秒前` : '之前'}：${p.doing}${p.facts.length ? `；${p.facts.join('；')}` : ''}`)
+    }
   }
   if (screen.check) {
     lines.push(`学生正在做的题：${screen.check.prompt}`)
     if (screen.check.table.length) lines.push(`题目里的表格：\n${screen.check.table.join('\n')}`)
+    if (screen.check.diagram?.length) lines.push(`题目里的树：\n${screen.check.diagram.join('\n')}`)
     if (screen.check.eliminated.length) lines.push(`他已经选错、排除掉的选项：${screen.check.eliminated.join('；')}`)
     if (screen.check.draft) lines.push(`他写到一半的回答：${screen.check.draft}`)
+  }
+  if (screen.code) {
+    lines.push(`学生的代码（${screen.code.version || '当前版本'}）：\n${screen.code.text}`)
+    if (screen.code.error) lines.push(`最近一次运行的报错：\n${screen.code.error}`)
+    else if (screen.code.output) lines.push(`最近一次运行的输出（节选）：\n${screen.code.output}`)
   }
   return lines
 }
@@ -75,8 +124,10 @@ function contextBlock({ concept, learner, misconceptionHistory, screen }) {
     `当前概念：${concept.title}`,
     `学习目标：${concept.objectives.join('；')}`,
   ]
-  if (learner) {
-    lines.push(`该概念掌握度估计：${Math.round(learner.mastery * 100)}%（尝试 ${learner.attempts} 次，对 ${learner.correct} 次）`)
+  // Counts, never the internal estimate: an uncalibrated percentage repeated to
+  // the learner reads as a measured probability of understanding.
+  if (learner && Number.isFinite(learner.attempts)) {
+    lines.push(`这一步的作答记录：${learner.attempts} 次，其中 ${learner.correct} 次答对${learner.firstTryWrong ? `，${learner.firstTryWrong} 次第一次答错` : ''}`)
   }
   if (misconceptionHistory?.length) {
     lines.push(`此前已暴露的误解：${misconceptionHistory.join('、')}`)
@@ -106,6 +157,7 @@ function checkText(c) {
     c.prompt, c.explain, c.rubric,
     ...(c.options ?? []).map((o) => o.text),
     ...(c.table?.rows ?? []).map((r) => r.join(' ')),
+    ...(c.diagram ?? []),
     ...(c.facts ?? []),
   ].filter(Boolean).join('\n')
 }
@@ -126,10 +178,15 @@ export function allowedFigureSource(concept, { screen, check, extra } = {}) {
     checkText(check),
     screen?.doing,
     ...(screen?.facts ?? []),
+    ...(screen?.previous ?? []).flatMap((p) => [p.doing, ...p.facts]),
     screen?.check?.prompt,
     ...(screen?.check?.table ?? []),
+    ...(screen?.check?.diagram ?? []),
     ...(screen?.check?.eliminated ?? []),
     screen?.check?.draft,
+    screen?.code?.text,
+    screen?.code?.error,
+    screen?.code?.output,
     extra,
   ].filter(Boolean).join('\n')
 }
@@ -201,10 +258,24 @@ export const repairGrade = (concept, max) => (v) => {
 const GRADE_SCHEMA = `{
   "verdict": "correct" | "partial" | "misconception" | "incorrect",
   "misconception_id": "上面列表里的 id，或空字符串",
+  "points": [ { "index": 评分要点的序号（从 0 开始）, "met": true 或 false } ],
   "feedback": "直接说给学生听的话，中文，2-4 句",
   "evidence": "学生原话里让你做出这个判断的那一小段",
-  "confidence": 0.0 到 1.0 的数字
+  "confidence": 0.0 到 1.0 的数字，表示你对这个判定有多确定
 }`
+
+/** Validate and normalise the per-point results of a grading, or return a problem. */
+export function normalisePoints(v, points) {
+  if (!points?.length) return { ok: true, value: [] }
+  if (!Array.isArray(v.points)) return { ok: false, problem: 'points 必须是数组，逐条给出每个评分要点是否命中' }
+  const out = points.map(() => null)
+  for (const p of v.points) {
+    if (!Number.isInteger(p?.index) || p.index < 0 || p.index >= points.length) return { ok: false, problem: `points 里的 index 必须在 0 到 ${points.length - 1} 之间` }
+    out[p.index] = Boolean(p.met)
+  }
+  if (out.some((m) => m === null)) return { ok: false, problem: `points 必须覆盖全部 ${points.length} 个评分要点` }
+  return { ok: true, value: out }
+}
 
 /**
  * Grade a written answer.
@@ -223,13 +294,14 @@ ${contextBlock({ concept, learner, misconceptionHistory, screen })}
 
 评分标准（作者撰写，以此为准，不要自行加码）：
 ${check.rubric}
-
+${check.points?.length ? `\n逐条评分要点（points 里对每一条给出是否命中）：\n${check.points.map((p, i) => `${i}. ${p}`).join('\n')}\n` : ''}
 本概念登记在案的误解：
 ${misconceptionMenu(concept)}
 
 判定规则：
 - correct：命中评分标准要求的要点。表述不漂亮、不完整但抓住了关键，仍算 correct。
 - partial：方向对但缺了评分标准明确要求的要点，或理由说不清楚。
+- confidence：学生的话模棱两可、你拿不准时，如实给低分（低于 0.5 的判定会交给老师核实，不会直接计入）。
 - misconception：答案反映出上面列表里的某个错误信念。此时 misconception_id 必须填该 id。
 - incorrect：答错了，但不对应上面列表里的任何一条。misconception_id 填空字符串。
 
@@ -266,11 +338,25 @@ misconception_id 只能从上面列表里选，或填空字符串。绝对不要
           return `misconception_id "${v.misconception_id}" 不在允许的列表里：${ids.join(', ')}`
         }
         if (v.verdict === 'misconception' && !v.misconception_id) return 'verdict 为 misconception 时必须给出 misconception_id'
+        const pts = normalisePoints(v, check.points)
+        if (!pts.ok) return pts.problem
+        if (v.verdict === 'correct' && pts.value.length && pts.value.some((m) => !m)) return 'verdict 为 correct 时每个评分要点都应命中；有要点没命中就判 partial'
         // Asked not to invent figures, the model does anyway. Enforce it.
         return checkQuantities(v.feedback, allowedFigureSource(concept, { screen, check, extra: answer }))
       },
     },
-  )
+  ).then((v) => {
+    const pts = normalisePoints(v, check.points)
+    const confidence = Number.isFinite(Number(v.confidence)) ? Math.max(0, Math.min(1, Number(v.confidence))) : null
+    return {
+      verdict: v.verdict,
+      misconception_id: v.misconception_id || '',
+      feedback: v.feedback,
+      evidence: typeof v.evidence === 'string' ? v.evidence.slice(0, 300) : '',
+      confidence,
+      points: (check.points ?? []).map((text, i) => ({ text, met: pts.ok ? pts.value[i] : null })),
+    }
+  })
 }
 
 /**
@@ -438,7 +524,7 @@ function forbiddenAnswer(screenCheck, check) {
  * most common way a capable model makes a lesson worse.
  */
 export function answerQuestion({
-  concept, question, learner, misconceptionHistory, screen, check, courseTitle, upcoming, signal,
+  concept, question, history = [], learner, misconceptionHistory, screen, check, courseTitle, upcoming, signal,
 }) {
   const system = `你是「${courseTitle}」这门课的 AI 老师，学生正在学「${concept.title}」这一节。
 
@@ -459,12 +545,13 @@ ${upcoming?.length ? `学生还没学到的内容（可以提一句「后面会�
 - 如果他问的是正在做的那道题，只帮他理清思路，绝不直接说出答案或暗示是哪个选项。
 - 如果问题超出本节范围，简短回答并说明后面哪一步会讲到。
 - 不要输出 markdown 标题或列表符号，就写成自然的几句话。
-- 全程中文，不要夹杂英文单词。`
+- 他说「刚才」「之前那个」时，对照上面「之前显示过的状态」和对话记录，说清楚是哪两次结果、差在哪。
+- 全程中文，不要夹杂英文单词。${screen?.focus === 'project' ? '\n- 他在写项目代码。可以解释报错和概念，但不要替他写出完整的代码或替他选定最终模型。' : ''}`
 
   return checkedReply(
-    [{ role: 'system', content: system }, { role: 'user', content: question }],
+    [{ role: 'system', content: system }, ...history, { role: 'user', content: question }],
     {
-      allowed: allowedFigureSource(concept, { screen, extra: question }),
+      allowed: allowedFigureSource(concept, { screen, extra: `${question}\n${history.map((m) => m.content).join('\n')}` }),
       forbidden: forbiddenAnswer(screen?.check, check),
       model: MODELS.interactive, maxTokens: 2500, temperature: 0.5, signal,
     },
@@ -479,16 +566,23 @@ ${upcoming?.length ? `学生还没学到的内容（可以提一句「后面会�
  * the reasoning. Handing over the answer on the first ask removes the work the
  * hint exists to support.
  */
-export function generateHint({ concept, learner, attemptsInStep, misconceptionHistory, screen, check, signal }) {
-  const level = attemptsInStep >= 3 ? 'strong' : attemptsInStep >= 1 ? 'medium' : 'light'
-  const levelRule = {
-    light: '只指出该往哪里看、该注意界面上的哪个数字。不要给结论。',
-    medium: '给出推理的方向和一个关键观察，但把最后一步留给学生。',
-    strong: '把推理过程讲清楚，可以接近答案，但仍然让学生自己完成最后的操作。',
-  }[level]
-  const target = screen?.focus === 'check' && screen.check
-    ? '学生卡在上面那道题上。提示针对这道题，绝不直接说出答案或暗示是哪个选项。'
-    : '学生在实验里。提示针对他此刻在实验界面上看到的东西。'
+/** What each help level may say. Level 5 is a full solution, recorded as such by the client. */
+export const HINT_LEVEL_RULES = {
+  1: '只指出该往哪里看、该注意界面上的哪个对象或数字。不要给结论，不要给推理。',
+  2: '提一个引导他思考的问题，让他自己把关键一步想出来。不要给结论。',
+  3: '给一个和题目不同、但道理相同的小对比例子，把回到原题的最后一步留给他。',
+  4: '给出部分解题步骤，讲到最后一步之前停下，不说最终答案。',
+  5: '把完整的解法讲清楚，可以给出答案。',
+}
+
+export function generateHint({ concept, learner, level = 1, history = [], misconceptionHistory, screen, check, signal }) {
+  const lv = Number.isInteger(level) && level >= 1 && level <= 5 ? level : 1
+  const levelRule = HINT_LEVEL_RULES[lv]
+  const target = screen?.focus === 'project'
+    ? '学生在写项目代码。提示针对他的代码和最近的运行结果，不要替他写出完整代码或替他选定最终模型。'
+    : screen?.focus === 'check' && screen.check
+      ? `学生在做上面那道题。${lv < 5 ? '提示针对这道题，绝不直接说出答案或暗示是哪个选项。' : '他选择了看完整解法。'}`
+      : '学生在实验里。提示针对他此刻在实验界面上看到的东西。'
 
   const system = `你是「${concept.title}」这一节的 AI 老师，学生点了「给我一个提示」。
 
@@ -498,16 +592,79 @@ ${contextBlock({ concept, learner, misconceptionHistory, screen })}
 ${concept.explain.intuition}
 
 ${target}
-提示强度：${level}。${levelRule}
-
-写 2-4 句、150 字以内，中文不夹英文，直接对学生说，不要开场白，不要 markdown 符号。引用界面上能看到的具体东西；引用数字只能用上面给出的数字。`
+提示等级：第 ${lv} 级（共 5 级）。${levelRule}
+${history.length ? '前面的对话里已经给过的提示不要重复，在它们的基础上往前走一步。\n' : ''}
+写 2-4 句、${lv >= 4 ? 220 : 150} 字以内，中文不夹英文，直接对学生说，不要开场白，不要 markdown 符号。引用界面上能看到的具体东西；引用数字只能用上面给出的数字。`
 
   return checkedReply(
-    [{ role: 'system', content: system }, { role: 'user', content: '给我一个提示。' }],
+    [{ role: 'system', content: system }, ...history, { role: 'user', content: `给我第 ${lv} 级提示。` }],
     {
-      allowed: allowedFigureSource(concept, { screen }),
-      forbidden: screen?.focus === 'check' ? forbiddenAnswer(screen?.check, check) : null,
-      model: MODELS.interactive, maxTokens: 2200, temperature: 0.45, signal,
+      allowed: allowedFigureSource(concept, { screen, check: lv >= 5 ? check : null }),
+      forbidden: screen?.focus === 'check' && lv < 5 ? forbiddenAnswer(screen?.check, check) : null,
+      model: MODELS.interactive, maxTokens: 2400, temperature: 0.45, signal,
     },
   )
+}
+
+// --- the project's written explanation ------------------------------------------
+
+/** One experiment record as the grader sees it. */
+export function recordLine(r) {
+  const pct = (v) => `${(v * 100).toFixed(1)}%`
+  const params = Object.entries(r.params ?? {}).filter(([k, v]) => v !== null && !(k === 'criterion' && v === 'gini') && k !== 'random_state')
+    .map(([k, v]) => `${k}=${v}`).join(', ') || '默认参数'
+  return `「${r.name}」（${params}）：训练准确率 ${r.train_acc.toFixed(3)}（${pct(r.train_acc)}），验证准确率 ${r.val_acc.toFixed(3)}（${pct(r.val_acc)}），深度 ${r.depth}，叶子 ${r.leaves}`
+}
+
+/**
+ * Grade the written part of a project submission against the author's points.
+ *
+ * Only the explanation is graded here. Whether the code ran, whether the data
+ * was used properly, whether the comparison is complete and whether the
+ * numbers match the run are decided by rules on the client, from the run's own
+ * records — the model is not asked to judge any of them.
+ */
+export async function gradeProjectExplanation({ project, task, roles, conclusion, chosen, records, split, signal }) {
+  const points = project.explanationPoints
+  const system = `你在批改一个决策树结课项目的文字部分。学生在陌生数据（${task.dataset.description}）上用 scikit-learn 做了实验。
+
+学生这次运行记录下来的实验（系统从真实运行中取得，数字准确）：
+${records.map((r) => `- ${recordLine(r)}`).join('\n')}
+${split ? `数据划分：训练 ${split.n_train} 行，验证 ${split.n_val} 行${split.random_state !== null && split.random_state !== undefined ? `，random_state=${split.random_state}` : ''}。` : ''}
+学生最终选择的模型：${chosen ? recordLine(chosen) : '（没有选择）'}
+
+评分要点（逐条判断是否命中；points 里 index 对应下面的序号）：
+${points.map((p, i) => `${i}. ${p.text}${p.required ? '（必需）' : '（加分项）'}`).join('\n')}
+
+判定原则：
+- 只看学生写出来的理由，不要替他补全。说法不专业但意思对，算命中。
+- 选择的模型不必是验证准确率最高的那个；只要理由基于验证表现并说清取舍，就可以命中 select。
+- 只凭训练准确率选模型，select 不命中。
+- feedback 直接对学生说，2-4 句、150 字以内，中文，只能引用上面列出的数字。`
+
+  const user = `学生写的「训练集和验证集各自的作用」：\n${roles || '（空）'}\n\n学生写的结论：\n${conclusion || '（空）'}`
+  const v = await chatJSON(
+    [{ role: 'system', content: system }, { role: 'user', content: user }],
+    {
+      schemaHint: `{ "points": [ { "index": 序号, "met": true 或 false, "reason": "一句话理由" } ], "feedback": "说给学生听的话", "confidence": 0.0 到 1.0 }`,
+      model: MODELS.interactive,
+      maxTokens: 3000,
+      temperature: 0.2,
+      signal,
+      repair: trimFeedback(220),
+      validate: (x) => {
+        const pts = normalisePoints(x, points)
+        if (!pts.ok) return pts.problem
+        if (typeof x.feedback !== 'string' || x.feedback.trim().length < 10) return 'feedback 太短或缺失'
+        if (x.feedback.trim().length > 220) return 'feedback 太长，压到 150 字以内'
+        return checkQuantities(x.feedback, [records.map(recordLine).join('\n'), roles, conclusion, split ? JSON.stringify(split) : ''].join('\n'))
+      },
+    },
+  )
+  const met = normalisePoints(v, points).value
+  return {
+    points: points.map((p, i) => ({ id: p.id, text: p.text, required: p.required, met: met[i], reason: typeof v.points?.find((x) => x.index === i)?.reason === 'string' ? v.points.find((x) => x.index === i).reason.slice(0, 200) : '' })),
+    feedback: v.feedback,
+    confidence: Number.isFinite(Number(v.confidence)) ? Math.max(0, Math.min(1, Number(v.confidence))) : null,
+  }
 }

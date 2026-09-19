@@ -11,6 +11,8 @@ import { validateCourse } from '../src/engine/schema.js'
 import { practiceGenerators, generatePractice, resolvePractice, practiceId } from '../src/labs/practice.js'
 import { snapshot, profile, BATCH_COUNT } from '../src/labs/fruitTree/instability.js'
 import { labTypes } from '../src/labs/labTypes.js'
+import { readFileSync } from 'node:fs'
+import { contentHash } from '../src/engine/ids.js'
 import * as A from '../src/labs/decisionTree/algo.js'
 import { playTennis as ds } from '../src/labs/decisionTree/datasets.js'
 
@@ -19,8 +21,37 @@ const concept = (id) => course.concepts.find((c) => c.id === id)
 const pct = (v) => `${(v * 100).toFixed(1)}%`
 const f4 = (v) => v.toFixed(4)
 
-test('every shipped course validates', () => {
-  for (const c of courseList) assert.deepEqual(validateCourse(c), [], c.id)
+test('every shipped course validates, generators included', () => {
+  for (const c of courseList) assert.deepEqual(validateCourse(c, { generators: Object.keys(practiceGenerators) }), [], c.id)
+})
+
+test('the four main-line capabilities the requirements name all carry an unseen-instance verification', () => {
+  for (const id of ['read-tree', 'purity', 'overfitting', 'pruning']) {
+    const c = concept(id)
+    assert.ok(c.verify && c.capability, id)
+    assert.ok(c.verify.items.length >= 2, `${id}: at least two items, so one lucky guess cannot pass`)
+  }
+})
+
+test('free-response checks name their scoring points', () => {
+  for (const c of course.concepts) {
+    for (const chk of c.checks) if (chk.kind !== 'mcq') assert.ok(chk.points?.length, `${c.id}/${chk.id}`)
+  }
+})
+
+test('the project data packages are the files the task declares, byte for byte', () => {
+  const p = course.project
+  for (const t of [p.main, ...p.variants]) {
+    const text = readFileSync(new URL(`../public/${t.dataset.file}`, import.meta.url), 'utf8')
+    assert.equal(contentHash(text), t.dataset.hash, t.dataset.file)
+    const header = text.split('\n')[0].split(',')
+    assert.ok(header.includes(t.dataset.target), `${t.dataset.file}: target column`)
+    for (const id of t.dataset.idColumns) assert.ok(header.includes(id), `${t.dataset.file}: id column ${id}`)
+    assert.equal(text.trim().split('\n').length - 1, t.dataset.rows)
+    assert.ok(t.starter.includes(t.dataset.path), 'the starter reads the task\'s own file')
+  }
+  // Each variant changes the data and the target; the main task's code cannot simply be re-run.
+  for (const v of p.variants) assert.notEqual(v.dataset.target, p.main.dataset.target)
 })
 
 test('every lab and practice type a concept names is registered', () => {

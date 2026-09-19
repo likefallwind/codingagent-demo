@@ -1,102 +1,121 @@
 /**
- * Left rail: the course's concepts, their state, and the learner's mastery.
+ * Left rail: the course's steps and the capstone project.
  *
- * The linear spine stays visible — people want to know where they are in a
- * lesson — while the dot and the bar show what the engine actually believes,
- * which is what makes the adaptivity legible rather than mysterious.
+ * Every step is open to browse. What each row shows is the evidence status of
+ * the capability it teaches — not an unverified percentage — and prerequisites
+ * appear as advice ("建议先学…"), never as a lock that can be clicked through
+ * anyway. Visiting a step changes nothing about its status.
  */
 
 import React from 'react'
-import { MASTERY_THRESHOLD } from '../engine/learnerModel.js'
+import { CAP_SHORT } from '../engine/capabilities.js'
 
 const TONE = {
-  mastered: { dot: 'var(--ok)', ring: 'var(--ok-line)', fg: 'var(--ink-soft)', label: '已掌握' },
-  learning: { dot: 'var(--brand)', ring: 'var(--brand-line)', fg: 'var(--ink-strong)', label: '学习中' },
-  available: { dot: '#fff', ring: 'var(--brand-line-soft)', fg: 'var(--ink-soft)', label: '可开始' },
-  locked: { dot: '#fff', ring: 'var(--border)', fg: 'var(--muted-light)', label: '未解锁' },
+  transfer: { dot: 'var(--ok-deep)', ring: 'var(--ok-deep)', symbol: '★' },
+  verified: { dot: 'var(--ok)', ring: 'var(--ok-line)', symbol: '✓' },
+  done: { dot: 'var(--ok)', ring: 'var(--ok-line)', symbol: '✓' },
+  learning: { dot: 'var(--brand)', ring: 'var(--brand-line)', symbol: '•' },
+  unverified: { dot: '#fff', ring: 'var(--brand-line-soft)', symbol: '' },
 }
 
-// 临时：未解锁的概念也能点进去看，方便浏览整门课。状态点和「先掌握…」提示照旧，
-// 只是不再拦点击。改回 false 就恢复按前置概念解锁。
-const FREE_NAV = true
+export default function ConceptNav({ course, currentId, statusOf, onSelect, collapsed, onToggle }) {
+  const items = [
+    ...course.concepts.map((c, i) => ({ id: c.id, n: i + 1, title: c.shortTitle ?? c.title, chapter: c.chapter })),
+    ...(course.project ? [{ id: course.project.id, n: null, title: course.project.shortTitle ?? course.project.title, chapter: course.project.chapter }] : []),
+  ]
 
-export default function ConceptNav({ course, learner, statusOf, currentId, onSelect }) {
-  return (
-    <aside style={{
-      width: 236, flex: 'none', background: 'var(--panel)', borderRight: '1px solid var(--border)',
-      padding: '14px 14px 0', display: 'flex', flexDirection: 'column',
-    }} className="scroll-y">
-      <div style={{ fontSize: 12.5, color: 'var(--muted)', padding: '0 4px', marginBottom: 10 }}>本课概念</div>
-
-      <nav style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-        {course.concepts.map((c, i) => {
-          const status = statusOf(c.id)
-          const t = TONE[status]
-          const active = c.id === currentId
-          const mastery = learner.concepts[c.id]?.mastery ?? 0
-          const locked = status === 'locked'
-          const blocked = locked && !FREE_NAV
-          const needs = (c.prerequisites ?? []).map((p) => course.concepts.find((x) => x.id === p)?.shortTitle ?? p)
-          // A chapter heading wherever the chapter changes, so the advanced
-          // section reads as a branch rather than steps 8-10 of the main line.
-          const heading = c.chapter && c.chapter !== course.concepts[i - 1]?.chapter ? c.chapter : null
+  if (collapsed) {
+    return (
+      <nav aria-label="课程步骤" style={{
+        width: 44, flex: 'none', background: 'var(--panel)', borderRight: '1px solid var(--border)',
+        display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '10px 0', gap: 6,
+      }} className="scroll-y">
+        <button onClick={onToggle} aria-label="展开步骤导航" title="展开步骤导航" style={railBtn}>☰</button>
+        {items.map((it) => {
+          const s = statusOf(it.id)
+          const active = it.id === currentId
           return (
-            <React.Fragment key={c.id}>
-            {heading && (
-              <div style={{ fontSize: 11.5, color: 'var(--muted-light)', padding: i ? '12px 6px 4px' : '0 6px 4px' }}>{heading}</div>
-            )}
-            <button data-concept={c.id} data-status={status} onClick={() => !blocked && onSelect(c.id)} disabled={blocked}
-              title={locked ? `需要先掌握：${needs.join('、')}` : undefined}
-              style={{
-                display: 'flex', alignItems: 'flex-start', gap: 9, padding: '9px 10px',
-                borderRadius: 9, border: 'none', textAlign: 'left',
-                background: active ? 'var(--brand-tint)' : 'transparent',
-                cursor: blocked ? 'not-allowed' : 'pointer',
-              }}>
-              <span style={{
-                width: 15, height: 15, flex: 'none', marginTop: 2, borderRadius: '50%',
-                background: t.dot, border: `1.5px solid ${t.ring}`,
-              }} />
-              <span style={{ flex: 1, minWidth: 0 }}>
-                <span style={{
-                  display: 'block', fontSize: 13, lineHeight: 1.45,
-                  fontWeight: active ? 700 : 400,
-                  color: active ? 'var(--brand)' : t.fg,
-                }}>
-                  {i + 1}. {c.shortTitle ?? c.title}
-                </span>
-                {!locked && (
-                  <span style={{ display: 'block', marginTop: 5 }}>
-                    <span style={{ display: 'block', height: 3, borderRadius: 2, background: 'var(--border-soft)' }}>
-                      <span style={{
-                        display: 'block', height: '100%', borderRadius: 2,
-                        width: `${Math.min(100, (mastery / MASTERY_THRESHOLD) * 100)}%`,
-                        background: status === 'mastered' ? 'var(--ok)' : 'var(--brand)',
-                        transition: 'width .3s ease',
-                      }} />
-                    </span>
-                  </span>
-                )}
-                {locked && (
-                  <span style={{ display: 'block', fontSize: 11, color: 'var(--muted-light)', marginTop: 3 }}>
-                    先掌握「{needs.join('、')}」
-                  </span>
-                )}
-              </span>
+            <button key={it.id} onClick={() => onSelect(it.id)} aria-label={`${it.n ? `第 ${it.n} 步 ` : ''}${it.title}，${s.label}`}
+                    aria-current={active ? 'step' : undefined} title={`${it.title} · ${s.label}`}
+                    style={{ ...railBtn, fontWeight: active ? 700 : 400, color: active ? 'var(--brand)' : 'var(--ink-soft)', background: active ? 'var(--brand-tint)' : 'transparent' }}>
+              {it.n ?? '项'}
             </button>
-            </React.Fragment>
           )
         })}
       </nav>
+    )
+  }
+
+  return (
+    <nav aria-label="课程步骤" style={{
+      width: 236, flex: 'none', background: 'var(--panel)', borderRight: '1px solid var(--border)',
+      padding: '12px 12px 0', display: 'flex', flexDirection: 'column',
+    }} className="scroll-y">
+      <div style={{ display: 'flex', alignItems: 'center', padding: '0 4px', marginBottom: 8 }}>
+        <span style={{ fontSize: 12.5, color: 'var(--muted)' }}>本课步骤</span>
+        <span style={{ flex: 1 }} />
+        <button onClick={onToggle} aria-label="收起步骤导航" title="收起" style={{ ...railBtn, width: 26, height: 26, fontSize: 13 }}>«</button>
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        {items.map((it, i) => {
+          const s = statusOf(it.id)
+          const t = TONE[s.key] ?? TONE.unverified
+          const active = it.id === currentId
+          const heading = it.chapter && it.chapter !== items[i - 1]?.chapter ? it.chapter : null
+          return (
+            <React.Fragment key={it.id}>
+              {heading && (
+                <div style={{ fontSize: 11.5, color: 'var(--muted-light)', padding: i ? '12px 6px 4px' : '0 6px 4px' }}>{heading}</div>
+              )}
+              <button data-concept={it.id} data-status={s.key} onClick={() => onSelect(it.id)}
+                aria-current={active ? 'step' : undefined} title={s.suggest ? `建议先学「${s.suggest}」；也可以直接打开` : undefined}
+                style={{
+                  display: 'flex', alignItems: 'flex-start', gap: 9, padding: '8px 10px',
+                  borderRadius: 9, border: 'none', textAlign: 'left',
+                  background: active ? 'var(--brand-tint)' : 'transparent',
+                }}>
+                <span aria-hidden="true" style={{
+                  width: 16, height: 16, flex: 'none', marginTop: 2, borderRadius: '50%',
+                  background: t.dot, border: `1.5px solid ${t.ring}`, color: '#fff',
+                  fontSize: 10, lineHeight: '13px', textAlign: 'center',
+                }}>{t.symbol}</span>
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  <span style={{
+                    display: 'block', fontSize: 13, lineHeight: 1.45,
+                    fontWeight: active ? 700 : 400,
+                    color: active ? 'var(--brand)' : 'var(--ink-soft)',
+                  }}>
+                    {it.n ? `${it.n}. ` : ''}{it.title}
+                  </span>
+                  <span style={{ display: 'block', fontSize: 11, marginTop: 2, color: s.key === 'verified' || s.key === 'transfer' || s.key === 'done' ? 'var(--ok-deep)' : 'var(--muted)' }}>
+                    {s.label}{s.review ? ' · 待复习' : ''}
+                  </span>
+                  {s.suggest && active && (
+                    <span style={{ display: 'block', fontSize: 11, color: 'var(--muted-light)', marginTop: 2 }}>
+                      建议先学「{s.suggest}」
+                    </span>
+                  )}
+                </span>
+              </button>
+            </React.Fragment>
+          )
+        })}
+      </div>
 
       <div style={{ flex: 1, minHeight: 20 }} />
       <div style={{
-        borderTop: '1px solid var(--border-soft)', padding: '14px 4px 18px',
+        borderTop: '1px solid var(--border-soft)', padding: '12px 4px 16px',
         fontSize: 11.5, color: 'var(--muted-light)', lineHeight: 1.7,
       }}>
-        掌握度到 {Math.round(MASTERY_THRESHOLD * 100)}%、这一步的每道题都做对过，才会解锁下一个。
-        进度保存在本机浏览器里。
+        每一步都可以直接打开。标记只反映证据：{CAP_SHORT.verified}需要在没见过的新题上独立答对，
+        浏览或做引导练习不会改变它。记录保存在本机浏览器，可随时导出。
       </div>
-    </aside>
+    </nav>
   )
+}
+
+const railBtn = {
+  width: 30, height: 30, borderRadius: 8, border: '1px solid var(--border)', background: '#fff',
+  color: 'var(--ink-soft)', fontSize: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none',
 }

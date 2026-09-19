@@ -6,9 +6,9 @@
 
 import React from 'react'
 
-export function Card({ title, right, children, style, pad = 16 }) {
+export function Card({ title, right, children, style, pad = 16, ...rest }) {
   return (
-    <div className="panel" style={{ padding: pad, ...style }}>
+    <div className="panel" style={{ padding: pad, ...style }} {...rest}>
       {(title || right) && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
           {title && <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--ink-strong)' }}>{title}</div>}
@@ -60,7 +60,7 @@ export function Chip({ children, tone = 'neutral' }) {
   )
 }
 
-export function Button({ children, variant = 'ghost', onClick, disabled, style }) {
+export function Button({ children, variant = 'ghost', onClick, disabled, style, ...rest }) {
   const base = {
     height: 38, padding: '0 16px', borderRadius: 10, fontSize: 13.5, fontWeight: 500,
     transition: 'background .15s, border-color .15s', opacity: disabled ? 0.45 : 1,
@@ -73,18 +73,18 @@ export function Button({ children, variant = 'ghost', onClick, disabled, style }
   }
   return (
     <button onClick={disabled ? undefined : onClick} disabled={disabled}
-            style={{ ...base, ...variants[variant], ...style }}>
+            style={{ ...base, ...variants[variant], ...style }} {...rest}>
       {children}
     </button>
   )
 }
 
 /** Choice tile used wherever the learner picks a feature or an option. */
-export function Choice({ label, hint, selected, tone, onClick, disabled }) {
+export function Choice({ label, hint, selected, tone, onClick, disabled, ...rest }) {
   const border = tone === 'ok' ? 'var(--ok-line)' : tone === 'warn' ? 'var(--warn-line)' : selected ? 'var(--brand)' : 'var(--brand-line-soft)'
   const bg = tone === 'ok' ? 'var(--ok-bg)' : tone === 'warn' ? 'var(--warn-bg)' : selected ? 'var(--brand-tint)' : '#fff'
   return (
-    <button onClick={disabled ? undefined : onClick} disabled={disabled}
+    <button onClick={disabled ? undefined : onClick} disabled={disabled} aria-pressed={selected ? true : undefined} {...rest}
       style={{
         textAlign: 'left', padding: '11px 13px', borderRadius: 10,
         border: `1.5px solid ${border}`, background: bg,
@@ -142,4 +142,64 @@ export function Slider({ label, value, min, max, step = 1, onChange, display, no
              onChange={(e) => onChange(Number(e.target.value))} aria-label={label} />
     </div>
   )
+}
+
+/**
+ * A modal confirmation. Used where a click has a consequence the learner should
+ * choose knowingly — asking for help mid-verification, viewing a full solution,
+ * resetting progress. Focus moves to the dialog and Escape cancels.
+ */
+export function Confirm({ open, title, children, confirmLabel = '确定', cancelLabel = '取消', onConfirm, onCancel, tone = 'warn' }) {
+  const ref = React.useRef(null)
+  React.useEffect(() => {
+    if (!open) return undefined
+    const prev = document.activeElement
+    ref.current?.querySelector('button[data-primary]')?.focus()
+    const onKey = (e) => { if (e.key === 'Escape') onCancel?.() }
+    window.addEventListener('keydown', onKey)
+    return () => { window.removeEventListener('keydown', onKey); prev?.focus?.() }
+  }, [open, onCancel])
+  if (!open) return null
+  return (
+    <div role="presentation" onClick={onCancel} style={{
+      position: 'fixed', inset: 0, background: 'rgba(22,35,61,.28)', zIndex: 50,
+      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
+    }}>
+      <div ref={ref} role="dialog" aria-modal="true" aria-label={title} data-testid="confirm"
+           onClick={(e) => e.stopPropagation()} className="panel fade-up"
+           style={{ maxWidth: 440, width: '100%', padding: 20, boxShadow: '0 12px 40px rgba(22,35,61,.18)' }}>
+        <div style={{ fontSize: 15, fontWeight: 700, color: tone === 'warn' ? '#8a6414' : 'var(--ink-strong)', marginBottom: 10 }}>{title}</div>
+        <div style={{ fontSize: 13.5, lineHeight: 1.85, color: 'var(--ink-mid)' }}>{children}</div>
+        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 18 }}>
+          <Button variant="quiet" onClick={onCancel}>{cancelLabel}</Button>
+          <Button variant="primary" onClick={onConfirm} data-primary>{confirmLabel}</Button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/** An on/off switch with a visible label. */
+export function Toggle({ checked, onChange, label, hint }) {
+  return (
+    <label style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontSize: 12, color: 'var(--muted)', cursor: 'pointer' }} title={hint}>
+      <input type="checkbox" role="switch" aria-checked={checked} checked={checked} onChange={(e) => onChange(e.target.checked)}
+             style={{ width: 14, height: 14, accentColor: 'var(--brand)' }} />
+      {label}
+    </label>
+  )
+}
+
+/** Scroll to the element tagged `data-object="<id>"` and flash it — the "查看相关对象" link. */
+export function showObject(id) {
+  if (!id) return false
+  const el = document.querySelector(`[data-object="${CSS.escape(id)}"]`)
+  if (!el) return false
+  el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  el.classList.remove('flash')
+  void el.offsetWidth
+  el.classList.add('flash')
+  const focusable = el.matches('button, [tabindex]') ? el : el.querySelector('button, input, textarea, [tabindex="0"]')
+  focusable?.focus?.({ preventScroll: true })
+  return true
 }

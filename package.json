@@ -9,7 +9,11 @@
     "preview": "vite preview",
     "server": "node server/index.js",
     "test": "node --test test/*.test.js",
-    "e2e": "node e2e/walkthrough.mjs"
+    "e2e": "node e2e/all.mjs",
+    "e2e:walk": "node e2e/walkthrough.mjs",
+    "e2e:accept": "node e2e/acceptance.mjs",
+    "data": "node scripts/make-project-data.mjs",
+    "pyodide": "node scripts/fetch-pyodide.mjs"
   },
   "dependencies": {
     "express": "^4.21.2",

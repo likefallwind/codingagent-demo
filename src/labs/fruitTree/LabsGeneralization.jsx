@@ -173,6 +173,13 @@ export function DepthExplorer({ onEvidence, onScreen }) {
         </div>
         <svg viewBox="0 0 900 200" style={{ width: '100%', display: 'block' }}
              role="img" aria-label={`深度 ${depth} 的决策边界`}>
+          <defs>
+            {/* Oranges hatched, apples plain: readable without telling the two colours apart. */}
+            <pattern id="orange-hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+              <rect width="6" height="6" fill="#fce7c4" />
+              <line x1="0" y1="0" x2="0" y2="6" stroke="#e8b76a" strokeWidth="1.6" />
+            </pattern>
+          </defs>
           {bands.map((band, bi) => (
             <g key={band.peel}>
               <text x={52} y={bi * 60 + 55} fontSize={11.5} textAnchor="end" fill="var(--muted)">
@@ -180,7 +187,7 @@ export function DepthExplorer({ onEvidence, onScreen }) {
               </text>
               {band.cells.map((c) => (
                 <rect key={c.i} x={62 + c.i * 10.2} y={bi * 60 + 26} width={10.4} height={44}
-                      fill={c.cls === APPLE ? '#f9dcd5' : '#fce7c4'} />
+                      fill={c.cls === APPLE ? '#f9dcd5' : 'url(#orange-hatch)'} />
               ))}
             </g>
           ))}
@@ -188,7 +195,7 @@ export function DepthExplorer({ onEvidence, onScreen }) {
         </svg>
         <div style={{ display: 'flex', gap: 18, marginTop: 8, fontSize: 12, color: 'var(--muted)' }}>
           <span><span style={{ display: 'inline-block', width: 11, height: 11, background: '#f9dcd5', marginRight: 6, verticalAlign: -1 }} />判为苹果</span>
-          <span><span style={{ display: 'inline-block', width: 11, height: 11, background: '#fce7c4', marginRight: 6, verticalAlign: -1 }} />判为橙子</span>
+          <span><span style={{ display: 'inline-block', width: 11, height: 11, background: 'repeating-linear-gradient(45deg,#fce7c4 0 3px,#e8b76a 3px 4.5px)', marginRight: 6, verticalAlign: -1 }} />判为橙子（斜纹）</span>
         </div>
         {depth >= 6 && (
           <Feedback tone="warn" title="注意那些细条纹" style={{ marginTop: 14 }}>
@@ -238,6 +245,7 @@ export function CurveExplorer({ onEvidence, onScreen }) {
       kind: 'labAction',
       correct,
       detail: { labStep: 'find-overfit-start', guess: d },
+      targets: ['train_error_measures_quality'],
       description: correct
         ? `正确指出验证误差在 depth ${best} 之后开始回升`
         : `认为过拟合从 depth ${d} 开始，实际最低点在 depth ${best}`,
@@ -262,18 +270,25 @@ export function CurveExplorer({ onEvidence, onScreen }) {
           )}
 
           <path d={pathOf('tr')} stroke="var(--brand)" strokeWidth={2.4} fill="none" />
-          <path d={pathOf('va')} stroke="var(--bad)" strokeWidth={2.4} fill="none" />
+          <path d={pathOf('va')} stroke="var(--bad)" strokeWidth={2.4} fill="none" strokeDasharray="7 5" />
 
-          {curve.map((p) => (
-            <g key={p.d} data-depth={p.d} onClick={() => pick(p.d)} style={{ cursor: guess ? 'default' : 'pointer' }}>
-              <rect x={x(p.d) - 22} y={26} width={44} height={300} fill="transparent" />
-              <circle cx={x(p.d)} cy={y(p.tr)} r={4} fill="var(--brand)" />
-              <circle cx={x(p.d)} cy={y(p.va)} r={4} fill="var(--bad)" />
-              <text x={x(p.d)} y={348} fontSize={11.5} textAnchor="middle"
-                    fill={p.d === best ? 'var(--ok-deep)' : 'var(--muted)'}
-                    fontWeight={p.d === best ? 700 : 400}>{p.d}</text>
-            </g>
-          ))}
+          {/* Every candidate depth looks the same until the learner commits:
+              no colour, weight or label may single out the answer. */}
+          {curve.map((p) => {
+            const reveal = Boolean(guess) && p.d === best
+            return (
+              <g key={p.d} data-depth={p.d} onClick={() => pick(p.d)} style={{ cursor: guess ? 'default' : 'pointer' }}
+                 role="button" tabIndex={guess ? -1 : 0} aria-label={`选 depth ${p.d} 作为过拟合开始的地方`}
+                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(p.d) } }}>
+                <rect x={x(p.d) - 22} y={26} width={44} height={300} fill="transparent" />
+                <circle cx={x(p.d)} cy={y(p.tr)} r={4} fill="var(--brand)" />
+                <rect x={x(p.d) - 4} y={y(p.va) - 4} width={8} height={8} fill="var(--bad)" />
+                <text x={x(p.d)} y={348} fontSize={11.5} textAnchor="middle"
+                      fill={reveal ? 'var(--ok-deep)' : 'var(--muted)'}
+                      fontWeight={reveal ? 700 : 400}>{p.d}</text>
+              </g>
+            )
+          })}
 
           {guess && (
             <line x1={x(best)} y1={30} x2={x(best)} y2={326} stroke="var(--ok)" strokeWidth={2} strokeDasharray="5 4" />
@@ -286,15 +301,32 @@ export function CurveExplorer({ onEvidence, onScreen }) {
         </svg>
 
         <div style={{ display: 'flex', gap: 18, marginTop: 6, fontSize: 12 }}>
-          <span style={{ color: 'var(--brand)' }}>—— 训练误差</span>
-          <span style={{ color: 'var(--bad)' }}>—— 验证误差</span>
+          <span style={{ color: 'var(--brand)' }}>●—— 训练误差（实线、圆点）</span>
+          <span style={{ color: 'var(--bad)' }}>■- - 验证误差（虚线、方块）</span>
         </div>
+        {guess && (
+          <details style={{ marginTop: 8, fontSize: 12.5, color: 'var(--ink-soft)' }}>
+            <summary style={{ cursor: 'pointer', color: 'var(--muted)' }}>用表格查看这两条曲线的数字</summary>
+            <table className="data" style={{ marginTop: 6 }}>
+              <thead><tr><th>max_depth</th><th>训练误差</th><th>验证误差</th><th>叶子数</th></tr></thead>
+              <tbody>{curve.map((p) => <tr key={p.d}><td className="mono">{p.d}</td><td className="mono">{pct(p.tr)}</td><td className="mono">{pct(p.va)}</td><td className="mono">{p.leaves}</td></tr>)}</tbody>
+            </table>
+          </details>
+        )}
       </Card>
 
       {!guess ? (
         <Card title="轮到你了">
           <div style={{ fontSize: 13.5, color: 'var(--ink-mid)', lineHeight: 1.8 }}>
             <b>点一下你认为过拟合开始的那个深度</b>——也就是验证误差不再改善的地方。
+          </div>
+          <div role="group" aria-label="用按钮选择深度" style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 10 }}>
+            {curve.map((p) => (
+              <button key={p.d} data-depth-button={p.d} onClick={() => pick(p.d)}
+                      style={{ minWidth: 40, height: 30, borderRadius: 8, border: '1px solid var(--border)', background: '#fff', color: 'var(--ink-soft)', fontSize: 12.5 }}>
+                {p.d}
+              </button>
+            ))}
           </div>
         </Card>
       ) : (
@@ -357,6 +389,7 @@ export function PruneExplorer({ onEvidence, onScreen }) {
   const [showCode, setShowCode] = useState(false)
   const [quizLine, setQuizLine] = useState('还没开始小测验')
   const [prunedWell, setPrunedWell] = useState(false)
+  const [adopted, setAdopted] = useState(null)
 
   const bestVa = curve.find((p) => p.d === best).va
   const bestLeaves = curve.find((p) => p.d === best).leaves
@@ -366,23 +399,49 @@ export function PruneExplorer({ onEvidence, onScreen }) {
   const leaves = leafCount(tree)
   const good = vaErr <= bestVa + 0.02
 
-  // Pruning far enough to hurt is the mistake this step is watching for.
+  // Pruning far enough to hurt, while the sliders are still moving, is
+  // exploration: the learner may be looking at the consequence on purpose. It is
+  // recorded as behaviour and offered to the tutor as a moment — never as a
+  // mistake or as evidence of the belief that harder pruning is always better.
   useEffect(() => {
     if (vaErr > bestVa + 0.05 && minLeaf > 1 && !overPruned) {
-      setOverPruned(true)
+      setOverPruned({ depth, minLeaf, leaves, vaErr })
       onEvidence({
-        kind: 'labAction',
-        correct: false,
-        misconceptionId: 'pruning_always_helps',
+        kind: 'labExplore',
         detail: { labStep: 'over-prune', depth, minLeaf },
         description: `把 min_samples_leaf 调到 ${minLeaf}，叶子剩 ${leaves} 个，验证误差升到 ${pct(vaErr)}`,
-        facts: [
-          `最优设置的验证误差是 ${pct(bestVa)}（depth ${best}, min_samples_leaf 1）`,
-          `当前设置 depth ${depth}、min_samples_leaf ${minLeaf}：${leaves} 个叶子，训练误差 ${pct(trErr)}，验证误差 ${pct(vaErr)}`,
-        ],
       })
     }
-  }, [vaErr, bestVa, minLeaf, overPruned, depth, leaves, trErr, best, onEvidence])
+  }, [vaErr, bestVa, minLeaf, overPruned, depth, leaves, onEvidence])
+
+  /**
+   * The judgement: the learner declares which setting they would ship. Good if
+   * its validation error is within one validation sample of the best reachable.
+   * Declaring an over-pruned tree is a stated choice, so it can raise the
+   * pruning misconception — as a lead to check, not as a finding.
+   */
+  const adopt = () => {
+    if (adopted) return
+    const oneSample = 1 / VAL.length + 1e-9
+    const ok = vaErr <= bestVa + oneSample
+    const overpruned = !ok && minLeaf > 1 && leaves < bestLeaves
+    setAdopted({ depth, minLeaf, leaves, vaErr, ok })
+    onEvidence({
+      kind: 'labAction',
+      correct: ok,
+      misconceptionId: overpruned ? 'pruning_always_helps' : null,
+      targets: ['pruning_always_helps'],
+      detail: { labStep: 'adopt-setting', depth, minLeaf },
+      retry: false,
+      description: ok
+        ? `采用 depth ${depth}、min_samples_leaf ${minLeaf}：${leaves} 个叶子，验证误差 ${pct(vaErr)}，接近能达到的最低点`
+        : `采用 depth ${depth}、min_samples_leaf ${minLeaf}：验证误差 ${pct(vaErr)}，比能达到的最低点 ${pct(bestVa)} 高`,
+      facts: [
+        `能达到的最低验证误差是 ${pct(bestVa)}（depth ${best}，不剪枝时 ${bestLeaves} 个叶子）`,
+        `采用的设置 depth ${depth}、min_samples_leaf ${minLeaf}：${leaves} 个叶子，训练误差 ${pct(trErr)}，验证误差 ${pct(vaErr)}`,
+      ],
+    })
+  }
 
   // The good outcome worth pointing out: fewer leaves than the best unpruned
   // tree, and not a sample worse on validation.
@@ -391,7 +450,7 @@ export function PruneExplorer({ onEvidence, onScreen }) {
   }, [prunedWell, minLeaf, leaves, bestLeaves, vaErr, bestVa])
 
   useScreen(onScreen, {
-    doing: `把 max_depth 调到 ${depth}、min_samples_leaf 调到 ${minLeaf}`,
+    doing: `把 max_depth 调到 ${depth}、min_samples_leaf 调到 ${minLeaf}${adopted ? `（已采用 depth ${adopted.depth}、min_samples_leaf ${adopted.minLeaf}）` : ''}`,
     facts: [
       `当前：${leaves} 个叶子，训练误差 ${pct(trErr)}，验证误差 ${pct(vaErr)}`,
       `能达到的最低验证误差是 ${pct(bestVa)}（depth ${best}，不剪枝时 ${bestLeaves} 个叶子）`,
@@ -401,6 +460,11 @@ export function PruneExplorer({ onEvidence, onScreen }) {
       id: 'pruned-well',
       text: `验证误差还是 ${pct(bestVa)}，和能达到的最低点一样，可树从 ${bestLeaves} 个叶子剪到了 ${leaves} 个。`,
       ask: '为什么叶子变少了，验证误差却一点没变差？',
+    } : overPruned ? {
+      id: 'over-pruned',
+      text: `min_samples_leaf 调到 ${overPruned.minLeaf} 时，验证误差升到了 ${pct(overPruned.vaErr)}。如果你是在看剪狠了会怎样，这就是答案之一。`,
+      askLabel: '为什么剪得更狠反而变差？',
+      ask: '为什么把 min_samples_leaf 调得更大，验证误差反而变差了？',
     } : null,
   })
 
@@ -434,6 +498,24 @@ export function PruneExplorer({ onEvidence, onScreen }) {
           ? `验证误差 ${pct(vaErr)}，接近能达到的最低点 ${pct(bestVa)}，而树只有 ${leaves} 个叶子。在不损失泛化的前提下换来更简单的模型，这正是剪枝要找的位置。`
           : `验证误差 ${pct(vaErr)}，比最低点 ${pct(bestVa)} 高。${minLeaf > 6 ? '剪过头了——模型容量不足以表达真实规律，这是欠拟合。' : '再调调两个旋钮。'}`}
       </Feedback>
+
+      <Card title="你会用哪一组设置？">
+        {adopted ? (
+          <Feedback tone={adopted.ok ? 'ok' : 'warn'} title={adopted.ok ? '有依据的选择' : '这组设置的验证误差偏高'}>
+            你采用了 depth {adopted.depth}、min_samples_leaf {adopted.minLeaf}：{adopted.leaves} 个叶子，验证误差 {pct(adopted.vaErr)}
+            （能达到的最低是 {pct(bestVa)}）。
+            {adopted.ok ? ' 判断标准只有验证误差；在它不变差的前提下，更小的树更好。' : ' 叶子少不是目标本身；剪到验证误差变差，就是剪过头了。'}
+            <div style={{ marginTop: 8, color: 'var(--muted)' }}>滑块仍然可以随便调，这个选择已经记下了。</div>
+          </Feedback>
+        ) : (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+            <div style={{ fontSize: 13.5, color: 'var(--ink-mid)', lineHeight: 1.8, flex: 1, minWidth: 240 }}>
+              随便调、随便比较——调的过程不打分。想好了，就用当前这组设置作答：你会把这棵树交出去吗？
+            </div>
+            <Button variant="primary" onClick={adopt} data-testid="adopt-setting">采用当前设置</Button>
+          </div>
+        )}
+      </Card>
 
       <Card title="剪枝后的树" right={<Chip tone={good ? 'ok' : 'warn'}>{leaves} 个叶子</Chip>}>
         <TreeView tree={tree} width={900} height={260} />

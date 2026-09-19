@@ -13,7 +13,16 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { getCourse, getConcept } from '../src/courses/index.js'
 import { resolvePractice } from '../src/labs/practice.js'
-import { gradeAnswer, diagnoseLabAction, hintForWrongChoice, answerQuestion, generateHint, cleanScreen } from './tutor.js'
+import * as realTutor from './tutor.js'
+import * as fakeTutor from './fakeTutor.js'
+import { cleanScreen, cleanHistory } from './tutor.js'
+
+/**
+ * `LEARNAI_FAKE_LLM=1` swaps the model for a deterministic stand-in, so the
+ * browser tests can run every tutor path without a key. Never on by default.
+ */
+const FAKE = process.env.LEARNAI_FAKE_LLM === '1'
+const { gradeAnswer, diagnoseLabAction, hintForWrongChoice, answerQuestion, generateHint, gradeProjectExplanation } = FAKE ? fakeTutor : realTutor
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 
@@ -70,6 +79,8 @@ async function streamSSE(res, req, iterate) {
   // every stream returned 200 with an empty body in about two milliseconds.
   // The response closing is what actually means the client went away.
   res.on('close', () => ac.abort())
+  let timedOut = false
+  const timer = setTimeout(() => { timedOut = true; ac.abort() }, MODEL_DEADLINE_MS)
 
   try {
     for await (const delta of iterate(ac.signal)) {
@@ -77,18 +88,40 @@ async function streamSSE(res, req, iterate) {
     }
     res.write(`data: ${JSON.stringify({ done: true })}\n\n`)
   } catch (err) {
-    if (!ac.signal.aborted) {
+    if (timedOut) res.write(`data: ${JSON.stringify({ error: `AI 在 ${Math.round(MODEL_DEADLINE_MS / 1000)} 秒内没有完成，已停止` })}\n\n`)
+    else if (!ac.signal.aborted) {
       console.error('[tutor stream]', err.message)
       res.write(`data: ${JSON.stringify({ error: err.message })}\n\n`)
     }
   } finally {
+    clearTimeout(timer)
     res.end()
   }
 }
 
 app.get('/api/health', (_req, res) => {
-  res.json({ ok: true, hasKey: Boolean(process.env.MINIMAX_API_KEY) })
+  res.json({ ok: true, hasKey: Boolean(process.env.MINIMAX_API_KEY) || FAKE, fake: FAKE })
 })
+
+/** Echo the client's context tag, so a late reply can be matched to the task it belongs to. */
+const tag = (req) => (typeof req.body?.contextKey === 'string' ? req.body.contextKey.slice(0, 200) : null)
+
+/**
+ * Every model call has a deadline, and stops when the learner does. Without
+ * the first, a hung upstream leaves "批改中…" on screen for good; without the
+ * second, a stopped request keeps spending tokens nobody will read.
+ */
+export const MODEL_DEADLINE_MS = Number(process.env.LEARNAI_MODEL_DEADLINE_MS ?? 60000)
+function deadline(res, ms = MODEL_DEADLINE_MS) {
+  const ac = new AbortController()
+  let timedOut = false
+  const timer = setTimeout(() => { timedOut = true; ac.abort() }, ms)
+  res.on('close', () => { clearTimeout(timer); if (!res.writableEnded) ac.abort() })
+  return { signal: ac.signal, timedOut: () => timedOut, done: () => clearTimeout(timer) }
+}
+
+/** The error to send when a model call failed: a timeout says so. */
+const failure = (d, err) => (d.timedOut() ? `AI 在 ${Math.round(MODEL_DEADLINE_MS / 1000)} 秒内没有完成，已停止` : err.message)
 
 /** Grade a written answer against the author's rubric. */
 app.post('/api/tutor/grade', async (req, res) => {
@@ -103,12 +136,17 @@ app.post('/api/tutor/grade', async (req, res) => {
     return res.status(400).json({ error: 'answer is empty' })
   }
 
+  const d = deadline(res)
   try {
-    const result = await gradeAnswer({ concept, check, answer: answer.slice(0, 2000), learner, misconceptionHistory, screen })
-    res.json(result)
+    const result = await gradeAnswer({ concept, check, answer: answer.slice(0, 2000), learner, misconceptionHistory, screen, signal: d.signal })
+    res.json({ ...result, contextKey: tag(req), gradingVersion: FAKE ? 'fake-grader-1' : 'llm-grader-2' })
   } catch (err) {
-    console.error('[grade]', err.message)
-    res.status(502).json({ error: err.message })
+    if (!res.writableEnded && !res.destroyed) {
+      console.error('[grade]', failure(d, err))
+      res.status(d.timedOut() ? 504 : 502).json({ error: failure(d, err) })
+    }
+  } finally {
+    d.done()
   }
 })
 
@@ -124,12 +162,17 @@ app.post('/api/tutor/diagnose', async (req, res) => {
     retry: action.retry === true,
   }
 
+  const d = deadline(res)
   try {
-    const result = await diagnoseLabAction({ concept: found.concept, action: clean, learner, misconceptionHistory, screen: found.screen })
-    res.json(result)
+    const result = await diagnoseLabAction({ concept: found.concept, action: clean, learner, misconceptionHistory, screen: found.screen, signal: d.signal })
+    res.json({ ...result, contextKey: tag(req) })
   } catch (err) {
-    console.error('[diagnose]', err.message)
-    res.status(502).json({ error: err.message })
+    if (!res.writableEnded && !res.destroyed) {
+      console.error('[diagnose]', failure(d, err))
+      res.status(d.timedOut() ? 504 : 502).json({ error: failure(d, err) })
+    }
+  } finally {
+    d.done()
   }
 })
 
@@ -145,12 +188,17 @@ app.post('/api/tutor/check-hint', async (req, res) => {
   if (!Number.isInteger(choice) || !check.options[choice]) return res.status(400).json({ error: 'choice is out of range' })
   if (check.options[choice].correct) return res.status(400).json({ error: 'that choice is correct — nothing to hint' })
 
+  const d = deadline(res)
   try {
-    const result = await hintForWrongChoice({ concept, check, choice, learner, misconceptionHistory, screen })
-    res.json(result)
+    const result = await hintForWrongChoice({ concept, check, choice, learner, misconceptionHistory, screen, signal: d.signal })
+    res.json({ ...result, contextKey: tag(req) })
   } catch (err) {
-    console.error('[check-hint]', err.message)
-    res.status(502).json({ error: err.message })
+    if (!res.writableEnded && !res.destroyed) {
+      console.error('[check-hint]', failure(d, err))
+      res.status(d.timedOut() ? 504 : 502).json({ error: failure(d, err) })
+    }
+  } finally {
+    d.done()
   }
 })
 
@@ -173,22 +221,65 @@ app.post('/api/tutor/ask', async (req, res) => {
   const check = screen?.check ? findCheck(concept, screen.check.id) : null
 
   await streamSSE(res, req, (signal) => answerQuestion({
-    concept, question: question.slice(0, 500), learner, misconceptionHistory, screen, check,
+    concept, question: question.slice(0, 500), history: cleanHistory(req.body.history), learner, misconceptionHistory, screen, check,
     courseTitle: course.title, upcoming, signal,
   }))
 })
 
-/** Graded hint, aimed at whatever the learner is looking at. Checked like /ask. */
+/** A hint at a chosen level (1 where to look … 5 full solution), aimed at what the learner is looking at. Checked like /ask. */
 app.post('/api/tutor/hint', async (req, res) => {
   const found = resolve(req, res)
   if (!found) return
-  const { learner, attemptsInStep = 0, misconceptionHistory } = req.body
+  const { learner, level = 1, misconceptionHistory } = req.body
   const { concept, screen } = found
   const check = screen?.check ? findCheck(concept, screen.check.id) : null
+  const lv = Math.min(5, Math.max(1, Number.parseInt(level, 10) || 1))
 
   await streamSSE(res, req, (signal) => generateHint({
-    concept, learner, attemptsInStep: Number(attemptsInStep) || 0, misconceptionHistory, screen, check, signal,
+    concept, learner, level: lv, history: cleanHistory(req.body.history), misconceptionHistory, screen, check, signal,
   }))
+})
+
+/**
+ * The written part of a project submission. Everything else in the project is
+ * graded by rules on the client, from the run's own records; this endpoint only
+ * judges the explanation against the author's points.
+ */
+app.post('/api/project/grade', async (req, res) => {
+  const course = getCourse(req.body?.courseId)
+  const project = course?.project
+  if (!project) return res.status(400).json({ error: 'this course has no project' })
+  const { taskId, roles, conclusion, chosen, records, split } = req.body
+  const task = taskId === 'main' ? project.main : project.variants.find((v) => v.id === taskId)
+  if (!task) return res.status(400).json({ error: `unknown project task: ${taskId}` })
+  const num = (v) => (Number.isFinite(Number(v)) ? Number(v) : 0)
+  const cleanRecord = (r) => (r && typeof r === 'object' ? {
+    name: String(r.name ?? '').slice(0, 80),
+    params: Object.fromEntries(Object.entries(r.params ?? {}).slice(0, 10).map(([k, v]) => [String(k).slice(0, 40), typeof v === 'number' || v === null ? v : String(v).slice(0, 40)])),
+    train_acc: num(r.train_acc), val_acc: num(r.val_acc), depth: num(r.depth), leaves: num(r.leaves),
+  } : null)
+  const recs = Array.isArray(records) ? records.slice(0, 20).map(cleanRecord).filter(Boolean) : []
+  if (!recs.length) return res.status(400).json({ error: 'records are required' })
+  const d = deadline(res)
+  try {
+    const result = await gradeProjectExplanation({
+      signal: d.signal,
+      project, task,
+      roles: typeof roles === 'string' ? roles.slice(0, 1500) : '',
+      conclusion: typeof conclusion === 'string' ? conclusion.slice(0, 2500) : '',
+      chosen: cleanRecord(chosen),
+      records: recs,
+      split: split && typeof split === 'object' ? { n_train: num(split.n_train), n_val: num(split.n_val), random_state: split.random_state ?? null } : null,
+    })
+    res.json({ ...result, contextKey: tag(req), gradingVersion: FAKE ? 'fake-project-grader-1' : 'llm-project-grader-1' })
+  } catch (err) {
+    if (!res.writableEnded && !res.destroyed) {
+      console.error('[project-grade]', failure(d, err))
+      res.status(d.timedOut() ? 504 : 502).json({ error: failure(d, err) })
+    }
+  } finally {
+    d.done()
+  }
 })
 
 // Serve the built front end when one exists, so `npm run build && npm run server`
@@ -203,7 +294,8 @@ if (existsSync(DIST)) {
 }
 
 app.listen(PORT, () => {
-  if (!process.env.MINIMAX_API_KEY) {
+  if (FAKE) console.warn('⚠  LEARNAI_FAKE_LLM=1：AI 老师由确定性的替身回答，只用于测试。')
+  else if (!process.env.MINIMAX_API_KEY) {
     console.warn('⚠  MINIMAX_API_KEY 未设置 —— AI 功能会返回 502，其余部分正常。')
   }
   console.log(`API listening on http://localhost:${PORT}`)

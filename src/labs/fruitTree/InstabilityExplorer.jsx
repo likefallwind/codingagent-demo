@@ -51,6 +51,7 @@ export default function InstabilityExplorer({ onEvidence, onScreen }) {
       kind: 'labAction',
       correct,
       misconceptionId: correct ? null : (g.misconception ?? null),
+      targets: ['deterministic_means_stable'],
       detail: { labStep: 'guess-disagreement', guess: g.value },
       description: correct
         ? `预测两棵 depth 8 的树会在大约 13% 的新水果上意见不同，实际 ${pct(deep)}`

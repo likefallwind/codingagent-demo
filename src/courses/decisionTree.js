@@ -22,8 +22,19 @@
 const MAIN = '主线：一棵树的一生'
 const TRAP = '进阶：多值特征的陷阱'
 
+/**
+ * What a learner may use during an independent verification. Said before it
+ * starts, the same for every learner; asking for help is always allowed, but it
+ * turns that round into assisted practice.
+ */
+const VERIFY_RESOURCES =
+  '可以用：题目里给出的数据和树、本步的实验（课程自己的数据）。不用：展开的讲解、AI 老师的提示和问答。' +
+  '需要帮助随时可以请求，但这一组会转为辅助练习，之后换一组没见过的新题再验证。'
+
 export const decisionTreeCourse = {
   id: 'decision-tree',
+  /** Bumped when tasks change in a way that makes earlier results incomparable. */
+  version: '2026.09-2',
   title: '决策树：从分裂到剪枝',
   subtitle: '用水果和打网球的数据，走完一棵树的一生，再看它会在哪里骗你',
   concepts: [
@@ -31,7 +42,16 @@ export const decisionTreeCourse = {
     {
       id: 'read-tree',
       chapter: MAIN,
+      capability: { id: 'read-tree-path', title: '能读懂树的预测路径' },
       practice: { type: 'leaf-route' },
+      verify: {
+        version: 'read-tree-v1',
+        resources: VERIFY_RESOURCES,
+        items: [
+          { type: 'route-new-tree', criterion: '在一棵没见过的树上，把新水果走到正确的叶子' },
+          { type: 'route-new-tree', criterion: '换一棵树、换一个水果，再走对一次' },
+        ],
+      },
       /** Questions learners actually ask here — offered by the tutor panel. */
       suggestions: [
         '为什么树要问「是 / 否」而不是直接算？',
@@ -82,6 +102,10 @@ export const decisionTreeCourse = {
           prompt: '为什么这棵树不把那个混着的叶子继续往下分，直到全对为止？',
           rubric:
             '要点：继续分能让训练集全对，但那一刀只服务于极少数样本，学到的是这批数据的偶然性而非规律，会在新数据上变差。提到「过拟合」「泛化」「只为一两个样本」任一即算命中。只说「太麻烦」「树会太大」而没触及泛化，算部分正确。',
+          points: [
+            '指出继续往下分那一刀只是为了照顾极少数样本',
+            '说明这样学到的是偶然性，会在新数据上变差（过拟合 / 泛化变差）',
+          ],
           misconceptions: ['leaf_must_be_pure'],
         },
       ],
@@ -91,7 +115,16 @@ export const decisionTreeCourse = {
     {
       id: 'purity',
       chapter: MAIN,
+      capability: { id: 'compare-splits', title: '能用基尼不纯度比较不同的切法' },
       practice: { type: 'gini-value' },
+      verify: {
+        version: 'purity-v1',
+        resources: VERIFY_RESOURCES,
+        items: [
+          { type: 'gini-value', config: { variant: 'compare' }, criterion: '在一组新的切法里选出增益最高的一刀' },
+          { type: 'gini-value', config: { variant: 'compare' }, criterion: '换一组切法，再选对一次' },
+        ],
+      },
       /** Questions learners actually ask here — offered by the tutor panel. */
       suggestions: [
         '基尼不纯度和信息熵有什么区别？',
@@ -161,6 +194,10 @@ export const decisionTreeCourse = {
           prompt: '「果香」在根节点上的增益只有 0.071，三个特征里最低。那它是不是可以直接从数据里删掉？',
           rubric:
             '要点：不能。特征的价值取决于它作用在哪批样本上；果香在根节点弱，但在果皮切开后的右支里能一刀分净，算法建树时会选它。命中「在子节点里有用」「取决于当前样本」即算正确。只说「以后可能有用」而没说清为什么，算部分正确。',
+          points: [
+            '明确回答不能直接删掉',
+            '说明特征的价值取决于它作用在哪批样本上（在子节点里可能正好有用）',
+          ],
           misconceptions: ['gain_zero_means_useless'],
         },
       ],
@@ -170,7 +207,16 @@ export const decisionTreeCourse = {
     {
       id: 'greedy',
       chapter: MAIN,
+      capability: { id: 'greedy-first-cut', title: '能在新数据上找出贪心算法的第一刀' },
       practice: { type: 'first-cut' },
+      verify: {
+        version: 'greedy-v1',
+        resources: VERIFY_RESOURCES,
+        items: [
+          { type: 'first-cut', criterion: '在一小批新数据上找出贪心算法的第一刀' },
+          { type: 'first-cut', criterion: '换一批数据（胜出的特征可能不同），再找对一次' },
+        ],
+      },
       /** Questions learners actually ask here — offered by the tutor panel. */
       suggestions: [
         '决策树为什么是贪心算法？',
@@ -209,6 +255,10 @@ export const decisionTreeCourse = {
           prompt: '如果第一刀选错了，后面的分裂能把损失补回来吗？为什么？',
           rubric:
             '要点：不能完全补回来。第一刀决定了两个子问题各自面对哪些样本，后续只能在这个划分内部优化，算法也不会回头修改。命中「不回头」「决定了后续子问题」「只能局部优化」任一即算正确。只答「不能」没有理由，算部分正确。',
+          points: [
+            '回答不能完全补回来',
+            '说明原因：第一刀决定了后面子问题面对哪些样本，算法也不回头修改',
+          ],
           misconceptions: ['greedy_is_optimal'],
         },
         {
@@ -230,7 +280,16 @@ export const decisionTreeCourse = {
     {
       id: 'depth-cost',
       chapter: MAIN,
-      practice: { type: 'depth-read' },
+      capability: { id: 'train-vs-val', title: '能区分训练表现和验证表现', transfer: 'project' },
+      practice: { type: 'depth-read', targets: ['deeper_is_better'] },
+      verify: {
+        version: 'depth-cost-v1',
+        resources: VERIFY_RESOURCES,
+        items: [
+          { type: 'depth-read', config: { variant: 'table' }, criterion: '读一张新果园的训练/验证误差表，判断加深之后是变好还是变差' },
+          { type: 'depth-read', config: { variant: 'table' }, criterion: '换一个果园再判断一次（加深后可能变好，也可能变差）' },
+        ],
+      },
       /** Questions learners actually ask here — offered by the tutor panel. */
       suggestions: [
         '深度和叶子数是什么关系？',
@@ -281,6 +340,10 @@ export const decisionTreeCourse = {
           prompt: '把深度从 5 拖到 8，训练误差会怎么变？验证误差呢？先预测，再动手验证。',
           rubric:
             '要点：训练误差会继续下降（6.3% → 2.9%），验证误差会上升（10.0% → 13.3%）。两个方向都答对算正确；只答对训练误差方向算部分正确；认为两者都下降，命中 deeper_is_better 这个误解。',
+          points: [
+            '训练误差会继续下降',
+            '验证误差会上升',
+          ],
           misconceptions: ['deeper_is_better'],
         },
       ],
@@ -290,7 +353,16 @@ export const decisionTreeCourse = {
     {
       id: 'overfitting',
       chapter: MAIN,
-      practice: { type: 'pick-depth' },
+      capability: { id: 'choose-depth', title: '能在新数据上选择深度', transfer: 'project' },
+      practice: { type: 'pick-depth', targets: ['train_error_measures_quality'] },
+      verify: {
+        version: 'overfitting-v1',
+        resources: VERIFY_RESOURCES,
+        items: [
+          { type: 'pick-depth', criterion: '在一个新果园的学习曲线上选出该用的深度' },
+          { type: 'pick-depth', criterion: '换一个果园（最优深度不同），再选对一次' },
+        ],
+      },
       /** Questions learners actually ask here — offered by the tutor panel. */
       suggestions: [
         '为什么训练误差一直在降？',
@@ -348,6 +420,10 @@ export const decisionTreeCourse = {
           prompt: '曲线上 depth 2 的验证误差比 depth 3 还低。这是不是说明 depth 2 比 depth 3 更好？',
           rubric:
             '要点：不能这么下结论。验证集只有 60 个样本，1 个样本就是 1.67 个百分点，单点差异在噪声范围内；应该看整体趋势，或用交叉验证降低方差。命中「样本太少」「噪声」「看趋势」「交叉验证」任一即算正确。只答「是的 depth 2 更好」命中 curve_must_be_smooth 的反面——直接采信单点。',
+          points: [
+            '不能凭单点的差异就下结论',
+            '说明原因：验证集小、差一个样本就差 1.67 个百分点，应看趋势或用交叉验证',
+          ],
           misconceptions: ['curve_must_be_smooth'],
         },
       ],
@@ -357,7 +433,16 @@ export const decisionTreeCourse = {
     {
       id: 'pruning',
       chapter: MAIN,
-      practice: { type: 'pick-setting' },
+      capability: { id: 'choose-pruning', title: '能在剪枝设置之间做有依据的取舍', transfer: 'project' },
+      practice: { type: 'pick-setting', targets: ['pruning_always_helps'] },
+      verify: {
+        version: 'pruning-v1',
+        resources: VERIFY_RESOURCES,
+        items: [
+          { type: 'pick-setting', criterion: '在四种新的剪枝设置里选出有依据的那一个' },
+          { type: 'pick-setting', criterion: '换一批数据和设置，再选对一次' },
+        ],
+      },
       /** Questions learners actually ask here — offered by the tutor panel. */
       suggestions: [
         '预剪枝和后剪枝该用哪个？',
@@ -408,6 +493,10 @@ export const decisionTreeCourse = {
           prompt: '既然剪枝能提升泛化，为什么不把 min_samples_leaf 调到很大、让树尽可能小？',
           rubric:
             '要点：剪过头会欠拟合——模型容量不足以表达真实规律。实测 min_samples_leaf 到 12 时验证误差从 10.0% 恶化到 16.7%。命中「欠拟合」「容量不足」「验证误差会变差」任一即算正确。只说「树太小不好」没有依据，算部分正确。',
+          points: [
+            '指出剪过头会欠拟合（模型容量不足以表达真实规律）',
+            '说明判断依据是验证误差会变差（可以引用实测数字）',
+          ],
           misconceptions: ['pruning_always_helps'],
         },
       ],
@@ -417,6 +506,9 @@ export const decisionTreeCourse = {
     {
       id: 'instability',
       chapter: MAIN,
+      // No verification generator yet: the capability can be learned here but
+      // not marked as verified, and the page says so.
+      capability: { id: 'explain-instability', title: '能解释树为什么对训练数据敏感' },
       suggestions: [
         '为什么根节点反而最稳？',
         '那到底该相信哪一棵树？',
@@ -466,6 +558,9 @@ export const decisionTreeCourse = {
           prompt: '为什么越深的树，换一批数据之后变化越大？',
           rubric:
             '要点：深处的节点只剩很少的样本，几个样本的偶然波动就能改变哪一刀胜出；上面一刀的改变还会传给下面整棵子树。说出「深处样本少」「偶然波动 / 噪声」「改变会往下传」「方差大」中任一机制即算正确。只说「因为更复杂」「因为过拟合」而没有机制，算部分正确。认为树根本不会变，命中 deterministic_means_stable。',
+          points: [
+            '说出至少一个机制：深处样本少 / 偶然波动决定胜出的一刀 / 上层的改变向下传递',
+          ],
           misconceptions: ['deterministic_means_stable'],
         },
         {
@@ -487,7 +582,16 @@ export const decisionTreeCourse = {
     {
       id: 'entropy-gain',
       chapter: TRAP,
-      practice: { type: 'entropy-value' },
+      capability: { id: 'compute-entropy', title: '能计算一个集合的熵' },
+      practice: { type: 'entropy-value', targets: ['entropy_is_error'] },
+      verify: {
+        version: 'entropy-v1',
+        resources: VERIFY_RESOURCES,
+        items: [
+          { type: 'entropy-value', criterion: '算出一个新集合的熵' },
+          { type: 'entropy-value', criterion: '换一个集合再算对一次' },
+        ],
+      },
       title: '另一把尺子：熵与信息增益',
       shortTitle: '熵与信息增益',
       prerequisites: ['purity'],
@@ -534,6 +638,10 @@ export const decisionTreeCourse = {
           prompt: '「阴天」那 4 天全都打球。这个分支的熵是多少？为什么？',
           rubric:
             '要点：熵为 0，因为集合是纯的——只有一个类别，没有不确定性。命中「0」且给出「纯 / 只有一类 / 没有不确定性」的理由即算正确。只答 0 没有理由算部分正确。',
+          points: [
+            '答出熵为 0',
+            '给出理由：只有一个类别 / 集合是纯的 / 没有不确定性',
+          ],
         },
       ],
     },
@@ -542,7 +650,16 @@ export const decisionTreeCourse = {
     {
       id: 'many-values',
       chapter: TRAP,
-      practice: { type: 'id-gain' },
+      capability: { id: 'spot-identifier', title: '能识别标识符型特征的虚高增益' },
+      practice: { type: 'id-gain', targets: ['more_values_better'] },
+      verify: {
+        version: 'many-values-v1',
+        resources: VERIFY_RESOURCES,
+        items: [
+          { type: 'id-gain', criterion: '算出一列新的标识符的信息增益' },
+          { type: 'id-gain', criterion: '换一个数据集再算对一次' },
+        ],
+      },
       title: '一列行号能骗过信息增益',
       shortTitle: '多值陷阱',
       prerequisites: ['entropy-gain'],
@@ -589,6 +706,10 @@ export const decisionTreeCourse = {
           prompt: '用 Day 建出来的树在 14 个训练样本上 100% 正确。为什么它仍然是一棵毫无价值的树？',
           rubric:
             '要点：它只是记住了每一行，对没见过的新样本（新的 Day 编号）无法给出任何有依据的预测，没有学到可泛化的规律。命中「记忆 / 泛化 / 新样本没见过这个编号 / 不看天气」任一即算正确。只说「过拟合」而没解释机制，算部分正确。',
+          points: [
+            '指出它只是记住了每一行',
+            '说明它对没见过的新样本（新编号）给不出有依据的预测',
+          ],
           misconceptions: ['more_values_better'],
         },
       ],
@@ -598,7 +719,16 @@ export const decisionTreeCourse = {
     {
       id: 'gain-ratio-limits',
       chapter: TRAP,
+      capability: { id: 'use-gain-ratio', title: '能用增益率比较候选特征' },
       practice: { type: 'split-info' },
+      verify: {
+        version: 'gain-ratio-v1',
+        resources: VERIFY_RESOURCES,
+        items: [
+          { type: 'split-info', config: { variant: 'compare' }, criterion: '按增益率在两个新特征里选对' },
+          { type: 'split-info', config: { variant: 'compare' }, criterion: '换一组数字再选对一次' },
+        ],
+      },
       title: '增益率救不了这一局',
       shortTitle: '增益率的边界',
       prerequisites: ['many-values'],
@@ -648,11 +778,190 @@ export const decisionTreeCourse = {
           prompt: '既然增益率和 C4.5 的启发式都挡不住 Day，什么才挡得住？',
           rubric:
             '要点：结构性判断——检测并拒绝那些分支几乎全是单样本的特征（标识符），或在预处理阶段就不把行号这类列当作特征。命中「按分支大小/单例比例判断」「不把标识符当特征」「最小叶子样本数」任一即算正确。只说「人工检查」算部分正确。',
+          points: [
+            '提出结构性的判断：拒绝分支几乎全是单样本的特征，或一开始就不把标识符当特征（最小叶子样本数也算）',
+          ],
           misconceptions: ['gain_ratio_fixes_bias'],
         },
       ],
     },
   ],
+
+  /**
+   * The capstone: real Python on data the learner has never seen. The main task
+   * is assisted — scaffolded code, the tutor available. Then an independent
+   * variant on another farm's data, with different columns and a different
+   * target, so re-running the main task's code cannot pass it. A second
+   * parallel variant exists so a failed independent try is re-verified on
+   * unseen data rather than on the same task.
+   *
+   * Grading is by named criteria. Several parameter choices are acceptable;
+   * there is no single accuracy threshold.
+   */
+  project: {
+    id: 'project',
+    chapter: '结课项目',
+    title: '结课项目：预测种子能不能发芽',
+    shortTitle: '结课项目',
+    version: 'project-2026.09-1',
+    prerequisites: ['pruning'],
+    objectives: [
+      '在没见过的数据上，分清训练集和验证集各自的职责，并实施一次可复现的划分',
+      '比较至少三种设置（包括基线和复杂度参数的改变），用实验记录解释你选哪个模型',
+    ],
+    suggestions: [
+      '验证集应该留多少？',
+      'random_state 有什么用？',
+      '我该先试哪几种设置？',
+    ],
+    explain: {
+      intuition:
+        '前面每一步都用课程准备好的数据。这一次换成你没见过的数据，用真正的 Python 和 scikit-learn 自己跑：分出验证集、跑一个基线、比较几种复杂度设置，再用实验记录说明你为什么选这一个。',
+      example:
+        '评分看五件事：代码能不能完整运行；数据用得对不对（模型不能见过验证数据）；实验比得全不全（至少三种设置，包括基线和复杂度参数的改变）；结论里的数字和运行记录是否一致；理由站不站得住。没有唯一正确的参数，也没有一条准确率及格线。',
+      formal:
+        '训练集用来拟合模型；验证集只用来比较、选择配置。训练准确率随复杂度上升，不能拿来选模型。log_experiment 记下的每一行都来自那一次真实运行，改了代码或参数之后，旧结果会标成旧版本。',
+    },
+    misconceptions: [
+      {
+        id: 'train_score_selects_model',
+        belief: '训练准确率最高的模型就是最好的',
+        cue: '学生用训练准确率挑模型，或认为训练和验证表现应该同涨同落',
+        correction: '训练准确率随复杂度一路上升，对「选哪个」永远给同一个答案：更复杂。只有验证集上的表现能区分这些设置。',
+      },
+      {
+        id: 'evaluate_on_training',
+        belief: '在训练用过的数据上评估，就能知道模型好不好',
+        cue: '学生没有留出验证集，或用训练数据当验证数据',
+        correction: '模型见过的数据测的是记忆，不是泛化。不划分验证集，一棵不加限制的树在训练数据上几乎总是 100%。',
+      },
+    ],
+    criteria: [
+      { id: 'runs', title: '代码能完整运行', method: 'rule' },
+      { id: 'data', title: '数据使用合理', method: 'rule' },
+      { id: 'experiments', title: '实验比较完整', method: 'rule' },
+      { id: 'consistency', title: '结论与运行记录一致', method: 'rule' },
+      { id: 'explanation', title: '解释成立', method: 'llm' },
+    ],
+    /** Scoring points for the written part, graded against the run's own records. */
+    explanationPoints: [
+      { id: 'roles', text: '说清训练集和验证集各自的职责：训练集用来拟合，验证集用来在模型没见过的数据上比较、选择', required: true },
+      { id: 'select', text: '选择依据是验证集上的表现，而不是训练准确率', required: true },
+      { id: 'gap', text: '指出训练和验证表现之间的差距，并说明它意味着什么（例如过拟合）', required: true },
+      { id: 'tradeoff', text: '说明取舍或局限：复杂度和表现之间的权衡，或验证集小、换一种划分结论可能变', required: false },
+    ],
+    /**
+     * What the project assumes about programming, said at its entrance, with a
+     * way to catch up. Programming trouble shows only in "代码能完整运行"; the
+     * concept capabilities are verified in the steps, without any code.
+     */
+    prerequisite: {
+      text: '需要能读懂并改动简单的 Python：变量、列表、for 循环、调用函数；用过 pandas 读表格更好。',
+      separation: '代码跑不通只影响「代码能完整运行」这一项。前面各步的能力验证不需要写代码，不受编程熟练程度影响。',
+      primer: [
+        ['import pandas as pd', '引入 pandas，之后用 pd 这个名字'],
+        ['df = pd.read_csv("data/germination.csv")', '读入表格，df 就是这张表'],
+        ['df.head()', '看前 5 行，先弄清有哪些列'],
+        ['X = df[["soil_moisture", "temperature"]]', '取出几列当特征（注意两层方括号）'],
+        ['y = df["germinated"]', '取出一列当答案'],
+        ['for d in [2, 4, 6]:', '对列表里的每个值做一遍（下一行要缩进 4 个空格）'],
+        ['    m = DecisionTreeClassifier(max_depth=d, random_state=0)', '建一棵树，设好参数'],
+        ['    m.fit(X_train, y_train)', '用训练集训练它'],
+        ['    log_experiment(f"max_depth={d}", m, X_train, y_train, X_val, y_val)', '把这一次的结果记进实验表'],
+      ],
+      links: [
+        { title: 'Python 官方教程（中文）', url: 'https://docs.python.org/zh-cn/3/tutorial/' },
+        { title: 'pandas 入门教程', url: 'https://pandas.pydata.org/docs/getting_started/intro_tutorials/index.html' },
+        { title: 'scikit-learn：决策树', url: 'https://scikit-learn.org/stable/modules/tree.html' },
+      ],
+    },
+    /** Capabilities this project's independent variant confirms in a new context. */
+    capabilities: ['train-vs-val', 'choose-depth', 'choose-pruning'],
+    main: {
+      title: '主项目：种子发芽（可以用 AI 老师）',
+      resources: 'guided',
+      dataset: {
+        file: 'project/germination-v1.csv', path: 'data/germination.csv', version: 'germination-v1', hash: 'd78f2a7af586f82e',
+        target: 'germinated', idColumns: ['sample_id'], rows: 480,
+        description: '480 粒种子，每行一粒：托盘、土壤湿度、温度、光照时长、种子重量、播种深度，以及 germinated（1 = 发芽）。',
+      },
+      starter: `# 结课项目：预测种子能不能发芽
+# 数据包 germination-v1：480 粒种子，每行一粒。目标列 germinated（1 = 发芽，0 = 没发芽）。
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.tree import DecisionTreeClassifier
+from learnai import log_experiment
+
+df = pd.read_csv("data/germination.csv")
+print(df.shape)
+print(df.head())
+
+# ① 选特征和目标。先看上面打印出来的列：哪些能当特征？哪一列是答案？
+target = "germinated"
+features = ["soil_moisture", "temperature"]   # TODO：只放了两列，看过数据再决定要哪些
+
+X = df[features]
+y = df[target]
+
+# ② 划分训练集和验证集。固定 random_state，别人才能复现你的结果。
+X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.25, random_state=42)
+
+# ③ 基线：一棵不加限制的树。用 log_experiment 记录，平台才能把它放进实验表。
+baseline = DecisionTreeClassifier(random_state=0)
+baseline.fit(X_train, y_train)
+log_experiment("基线", baseline, X_train, y_train, X_val, y_val)
+
+# ④ TODO：至少再试两种复杂度设置（比如 max_depth、min_samples_leaf），每一种都用 log_experiment 记录。
+`,
+    },
+    variants: [
+      {
+        id: 'farm-b',
+        title: '独立验证：B 农场的出苗数据',
+        resources: 'independent',
+        dataset: {
+          file: 'project/farm-b-v1.csv', path: 'data/farm_b.csv', version: 'farm-b-v1', hash: '9f7917029ed8503e',
+          target: 'sprouted', idColumns: ['plot_id'], rows: 420,
+          description: '420 块地：地块编号、土壤类型、土壤 pH、降雨量、平均气温、日照时长、种子质量，以及 sprouted（yes / no）。',
+        },
+        starter: `# 独立验证：B 农场的出苗数据（数据包 farm-b-v1）
+# 目标列 sprouted：yes = 出苗，no = 没出苗。
+# 这一次由你自己完成：选特征和目标、划分数据、比较至少三种设置、选出你的模型。
+# 可以参考你在主项目里写的代码和 scikit-learn / pandas 文档。
+import pandas as pd
+from learnai import log_experiment
+
+df = pd.read_csv("data/farm_b.csv")
+print(df.shape)
+print(df.head())
+`,
+      },
+      {
+        id: 'farm-c',
+        title: '独立验证：C 农场的出苗数据',
+        resources: 'independent',
+        dataset: {
+          file: 'project/farm-c-v1.csv', path: 'data/farm_c.csv', version: 'farm-c-v1', hash: 'b4b9344d3a648219',
+          target: 'emerged', idColumns: ['field_id'], rows: 440,
+          description: '440 块田：田块编号、灌溉方式、土壤氮含量、土壤 pH、霜冻天数、遮阴比例、播种日，以及 emerged（Y / N）。',
+        },
+        starter: `# 独立验证：C 农场的出苗数据（数据包 farm-c-v1）
+# 目标列 emerged：Y = 出苗，N = 没出苗。
+# 这一次由你自己完成：选特征和目标、划分数据、比较至少三种设置、选出你的模型。
+# 可以参考你在主项目里写的代码和 scikit-learn / pandas 文档。
+import pandas as pd
+from learnai import log_experiment
+
+df = pd.read_csv("data/farm_c.csv")
+print(df.shape)
+print(df.head())
+`,
+      },
+    ],
+    variantResources:
+      '可以用：你自己在主项目里写的代码、scikit-learn 和 pandas 的官方文档、运行输出和报错信息。不用：AI 老师的提示和问答。' +
+      '需要帮助随时可以请求，但这次会转为辅助练习，之后换另一个农场的数据再独立验证。',
+  },
 
   /** Shown after every concept is mastered. */
   conclusion:

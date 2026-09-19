@@ -125,3 +125,55 @@ input[type="range"]::-moz-range-thumb {
 .scroll-y { overflow-y: auto; scrollbar-width: thin; }
 .scroll-y::-webkit-scrollbar { width: 8px; }
 .scroll-y::-webkit-scrollbar-thumb { background: #dfe6f2; border-radius: 4px; }
+
+/* Keyboard users need to see where they are. */
+:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+input[type="range"]:focus-visible { outline-offset: 6px; }
+svg [role="button"]:focus-visible { outline: none; }
+svg [role="button"]:focus-visible > :first-child { stroke: var(--brand); stroke-width: 3; }
+
+/* "查看相关对象": the element a piece of feedback is about, briefly outlined. */
+@keyframes flash {
+  0%, 60% { box-shadow: 0 0 0 3px var(--brand), 0 0 0 7px rgba(47, 99, 232, 0.18); }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+.flash { animation: flash 1.6s ease-out; border-radius: 13px; }
+@media (prefers-reduced-motion: reduce) {
+  .flash { animation: none; box-shadow: 0 0 0 3px var(--brand); }
+}
+
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+}
+
+/* A code editor: a plain textarea, monospaced, with a gutter drawn beside it. */
+.code-editor {
+  font-family: var(--mono);
+  font-size: 12.5px;
+  line-height: 1.7;
+  tab-size: 4;
+  white-space: pre;
+  overflow: auto;
+}
+.console {
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 1.65;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+table.data { border-collapse: collapse; font-size: 12.5px; width: 100%; }
+table.data th { text-align: left; font-weight: 500; color: var(--muted); padding: 6px 8px; white-space: nowrap; }
+table.data td { padding: 6px 8px; border-top: 1px solid var(--border-faint); color: var(--ink-mid); }
+
+/* Narrow windows and 200% zoom: one column, tighter padding, nothing cut off. */
+@media (max-width: 900px) {
+  .taskbar-grid { grid-template-columns: 1fr !important; }
+  main#main { padding: 12px 12px 32px !important; }
+}

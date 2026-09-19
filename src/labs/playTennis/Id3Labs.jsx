@@ -116,14 +116,18 @@ export function EntropyExplorer({ onEvidence, onScreen }) {
             <path d={curve((q) => Math.min(q, 1 - q))} stroke="var(--muted-faint)" strokeWidth={2} strokeDasharray="4 4" fill="none" />
             <line x1={x(p)} y1={16} x2={x(p)} y2={Hh - 20} stroke="var(--ink-soft)" strokeWidth={1} strokeDasharray="3 3" />
             <circle cx={x(p)} cy={y(H)} r={4} fill="var(--brand)" />
-            <circle cx={x(p)} cy={y(G)} r={4} fill="var(--orange)" />
+            <rect x={x(p) - 4} y={y(G) - 4} width={8} height={8} fill="var(--orange)" />
+            {/* Named on the chart itself, so the curves are not told apart by colour alone. */}
+            <text x={x(0.86) + 4} y={y(h2(0.86)) - 6} fontSize={11} fill="var(--brand)">熵</text>
+            <text x={x(0.86) + 4} y={y(1 - 0.86 ** 2 - 0.14 ** 2) - 6} fontSize={11} fill="var(--orange-deep)">基尼</text>
+            <text x={x(0.93) + 4} y={y(0.07) - 4} fontSize={11} fill="var(--muted)">错误率</text>
             <text x={x(0.5)} y={Hh - 4} fontSize={10.5} textAnchor="middle" fill="var(--muted-light)">打球的比例 →</text>
           </svg>
         </div>
         <div style={{ display: 'flex', gap: 16, marginTop: 8, fontSize: 12 }}>
-          <span style={{ color: 'var(--brand)' }}>—— 熵</span>
-          <span style={{ color: 'var(--orange-deep)' }}>—— 基尼</span>
-          <span style={{ color: 'var(--muted)' }}>- - 错误率</span>
+          <span style={{ color: 'var(--brand)' }}>●—— 熵</span>
+          <span style={{ color: 'var(--orange-deep)' }}>■—— 基尼</span>
+          <span style={{ color: 'var(--muted)' }}>- - 错误率（虚线）</span>
         </div>
       </Card>
 
@@ -251,6 +255,7 @@ export function IdTrapExplorer({ onEvidence, onScreen }) {
       kind: 'labAction',
       correct: Boolean(g.correct),
       misconceptionId: g.correct ? null : (g.misconception ?? null),
+      targets: ['more_values_better'],
       detail: { labStep: 'predict-day15', guess: g.label },
       description: g.correct
         ? '正确预测：Day 树对任何新的一天都给同一个答案'
@@ -402,6 +407,7 @@ export function GainRatioExplorer({ onEvidence, onScreen }) {
       kind: 'labAction',
       correct: Boolean(g.correct),
       misconceptionId: g.correct ? null : (g.misconception ?? null),
+      targets: ['gain_ratio_fixes_bias'],
       detail: { labStep: 'predict-gain-ratio', guess: g.label },
       description: g.correct ? '正确预测增益率下 Day 仍然第一' : `预测「${g.label}」，实际 Day 的增益率 ${f4(rows[0].gr)} 仍然第一`,
       facts: rows.map((r) => `${L(r.f)}：信息增益 ${f4(r.ig)}，Split Info ${f4(r.si)}，增益率 ${f4(r.gr)}`),

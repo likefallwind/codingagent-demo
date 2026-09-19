@@ -68,6 +68,7 @@ export function TreeReader({ onEvidence, onScreen }) {
       kind: 'labAction',
       correct,
       misconceptionId: correct ? null : 'leaf_must_be_pure',
+      targets: ['leaf_must_be_pure'],
       detail: { labStep: 'find-impure-leaf', picked: key },
       description: correct
         ? '正确找出了那个含有错误样本的叶子'
@@ -122,8 +123,8 @@ export function TreeReader({ onEvidence, onScreen }) {
                   onNodeClick={pick}
                   highlightPath={picked ? [picked.key] : []} />
         <div style={{ display: 'flex', gap: 18, marginTop: 10, fontSize: 12, color: 'var(--muted)' }}>
-          <span><span style={{ display: 'inline-block', width: 9, height: 9, borderRadius: '50%', background: 'var(--apple)', marginRight: 6 }} />判为苹果</span>
-          <span><span style={{ display: 'inline-block', width: 9, height: 9, borderRadius: '50%', background: 'var(--orange)', marginRight: 6 }} />判为橙子</span>
+          <span><span style={{ display: 'inline-block', width: 9, height: 9, borderRadius: '50%', background: 'var(--apple)', marginRight: 6 }} />「苹」判为苹果</span>
+          <span><span style={{ display: 'inline-block', width: 9, height: 9, borderRadius: '50%', background: 'var(--orange)', marginRight: 6 }} />「橙」判为橙子</span>
         </div>
       </Card>
 
@@ -259,6 +260,7 @@ export function SplitExplorer({ onEvidence, onScreen }) {
       kind: 'labAction',
       correct,
       misconceptionId: correct ? null : (key === 'w' ? 'more_thresholds_better' : null),
+      targets: ['more_thresholds_better'],
       detail: { labStep: 'guess-best-feature', guess: key },
       description: correct
         ? `猜对了：${best.name}最好的一刀增益最高`
@@ -316,15 +318,18 @@ export function SplitExplorer({ onEvidence, onScreen }) {
             <line x1={60} y1={current === 1 ? 180 : 105} x2={880} y2={current === 1 ? 180 : 105}
                   stroke="var(--brand)" strokeWidth={2} strokeDasharray="5 4" />
           )}
-          {SAMPLES.map((r, i) => (
-            <circle key={i} cx={xw(r.w)} cy={yp(r.peel)} r={7}
-                    fill={r.aroma ? (r.c === APPLE ? 'var(--apple)' : 'var(--orange)') : '#fff'}
-                    stroke={r.c === APPLE ? 'var(--apple)' : 'var(--orange)'} strokeWidth={2} />
-          ))}
+          {/* Class by shape as well as colour: apples round, oranges square. */}
+          {SAMPLES.map((r, i) => {
+            const color = r.c === APPLE ? 'var(--apple)' : 'var(--orange)'
+            const fill = r.aroma ? color : '#fff'
+            return r.c === APPLE
+              ? <circle key={i} cx={xw(r.w)} cy={yp(r.peel)} r={7} fill={fill} stroke={color} strokeWidth={2} />
+              : <rect key={i} x={xw(r.w) - 6.5} y={yp(r.peel) - 6.5} width={13} height={13} rx={2} fill={fill} stroke={color} strokeWidth={2} />
+          })}
           <text x={470} y={256} fontSize={11.5} textAnchor="middle" fill="var(--muted-light)">重量 (g) →</text>
         </svg>
         <div style={{ fontSize: 11.5, color: 'var(--muted-light)', marginTop: 2 }}>
-          空心圆 = 无果香。纵轴是果皮厚度。
+          圆 = 苹果，方块 = 橙子；空心 = 无果香。纵轴是果皮厚度。
         </div>
       </Card>
 
@@ -356,9 +361,11 @@ export function SplitExplorer({ onEvidence, onScreen }) {
           </div>
 
           <div style={{ marginTop: 16, paddingTop: 14, borderTop: '1px solid var(--border-faint)', display: 'flex', alignItems: 'center', gap: 10 }}>
+            {/* Which cut is best is the question this step asks: the label and
+                the colour wait until the guess is in. */}
             <Stat label="信息增益" value={gain < 0 ? '—' : f3(gain)}
-                  tone={isBest ? 'var(--ok-deep)' : undefined}
-                  sub={gain < 0 ? '这一刀没有把样本分开' : isBest ? '三个特征里最高' : undefined} />
+                  tone={guess && isBest ? 'var(--ok-deep)' : undefined}
+                  sub={gain < 0 ? '这一刀没有把样本分开' : guess && isBest ? '三个特征里最高' : undefined} />
             <div style={{ fontSize: 11.5, color: 'var(--muted-light)', lineHeight: 1.7, flex: 1.4 }}>
               Gini = 1 − p(苹果)² − p(橙子)²<br />
               增益 = 切前基尼 − 切后加权基尼
@@ -435,6 +442,7 @@ export function TreeBuilder({ onEvidence, onScreen }) {
       kind: 'labAction',
       correct,
       misconceptionId: correct ? null : (key === 'w' ? 'more_thresholds_better' : null),
+      targets: ['more_thresholds_better'],
       detail: { labStep: 'pick-root', feature: key },
       description: `第一刀选了${chosen.name}（增益 ${f3(chosen.gain)}），算法会选${ranking[0].name}（增益 ${f3(ranking[0].gain)}）`,
       facts: ranking.map((r) => `${r.name}最好的一刀「${r.condition}」增益 ${f3(r.gain)}`),

@@ -58,14 +58,14 @@ export function splitLabel(key, thr) {
  * identically, so the midpoints are the only distinct choices worth scoring.
  * Peel and aroma have a fixed, small set of meaningful cut points.
  */
-export function candidates(rows) {
+export function candidates(rows, keys = null) {
   const out = []
   const ws = [...new Set(rows.map((r) => r.w))].sort((x, y) => x - y)
   for (let i = 0; i + 1 < ws.length; i++) {
     out.push({ key: 'w', thr: Math.round((ws[i] + ws[i + 1]) / 2) })
   }
   out.push({ key: 'peel', thr: 1 }, { key: 'peel', thr: 2 }, { key: 'aroma', thr: 0 })
-  return out
+  return keys ? out.filter((c) => keys.includes(c.key)) : out
 }
 
 /**
@@ -78,10 +78,10 @@ export function gainOf(rows, key, thr) {
   return gini(rows) - (l.length * gini(l) + r.length * gini(r)) / rows.length
 }
 
-/** Highest-gain split respecting a minimum leaf size, or null if none qualifies. */
-export function bestSplit(rows, minLeaf = 1) {
+/** Highest-gain split respecting a minimum leaf size, or null if none qualifies. `keys` limits the features. */
+export function bestSplit(rows, minLeaf = 1, keys = null) {
   let best = null
-  for (const c of candidates(rows)) {
+  for (const c of candidates(rows, keys)) {
     const [l, r] = splitRows(rows, c.key, c.thr)
     if (l.length < minLeaf || r.length < minLeaf) continue
     const g = gainOf(rows, c.key, c.thr)
@@ -105,16 +105,16 @@ export function bestSplitFor(rows, key, minLeaf = 1) {
   return best
 }
 
-/** Grow a tree greedily to the given limits. */
-export function grow(rows, depth, maxDepth, minLeaf = 1) {
+/** Grow a tree greedily to the given limits, optionally over a subset of the features. */
+export function grow(rows, depth, maxDepth, minLeaf = 1, keys = null) {
   const cn = counts(rows)
   const node = { n: rows.length, cls: cn.a >= cn.o ? APPLE : ORANGE, a: cn.a, o: cn.o, rows }
   if (depth >= maxDepth || cn.a === 0 || cn.o === 0) return node
-  const b = bestSplit(rows, minLeaf)
+  const b = bestSplit(rows, minLeaf, keys)
   if (!b) return node
   node.split = { key: b.key, thr: b.thr, gain: b.gain }
-  node.left = grow(b.l, depth + 1, maxDepth, minLeaf)
-  node.right = grow(b.r, depth + 1, maxDepth, minLeaf)
+  node.left = grow(b.l, depth + 1, maxDepth, minLeaf, keys)
+  node.right = grow(b.r, depth + 1, maxDepth, minLeaf, keys)
   return node
 }
 

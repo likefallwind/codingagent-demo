@@ -1,233 +1,222 @@
 /**
  * The application shell.
  *
- * Holds the linear spine of the course on the left, the current concept's
- * material and lab in the middle, and the tutor on the right. The policy's
- * decision is surfaced as a visible line — "why am I seeing this" — rather than
- * silently reordering things behind the learner's back.
+ * Steps on the left, the current step (or the capstone project) in the middle,
+ * the tutor on the right. Both side panels can be collapsed; below a certain
+ * width they start collapsed, so the task is never squeezed out of view.
  *
- * Adaptivity is scoped to within a concept: the policy chooses what to show
- * inside the step (explain / lab / which check / practice / remediate), while
- * the learner keeps free movement between unlocked concepts.
+ * The shell is where the tutor's eyes are wired up. The step reports what its
+ * lab shows, which question is being answered and which task is in focus; the
+ * shell keeps the last few distinct states of the lab so "why did that change?"
+ * has something to refer to, and clears them when the task changes so an old
+ * experiment never leaks into a new one.
  *
- * The shell is also where the tutor's eyes are wired up. Labs report what they
- * show (see labs/screen.js), the question card reports what is being answered,
- * and the main column reports activity — so the tutor always knows what the
- * learner is doing, and can notice when they are stuck.
+ * It also owns the one question that crosses components: may help be given
+ * right now? While an independent verification or project variant is open, the
+ * answer is "ask the learner first", and a yes turns that attempt into assisted
+ * practice.
  */
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { courseList } from './courses/index.js'
+import { courseList, getConcept } from './courses/index.js'
 import { useLearner } from './engine/useLearner.js'
-import { getLab } from './labs/registry.js'
-import { generatePractice } from './labs/practice.js'
-import { LAYERS, reviewCheck, practiceSeed } from './engine/policy.js'
-import { MASTERY_THRESHOLD } from './engine/learnerModel.js'
+import { attemptFor } from './engine/learnerModel.js'
+import { TUTOR_POLICY } from './engine/tutorPolicy.js'
+import { GENERATOR_VERSION } from './labs/practice.js'
+import { RUNTIME_LIMITS } from './project/runtime.js'
+import { PROJECT_GRADING_VERSION } from './project/grading.js'
+import { projectSummary } from './project/summary.js'
 import Header from './components/Header.jsx'
 import ConceptNav from './components/ConceptNav.jsx'
+import ConceptView from './components/ConceptView.jsx'
 import TutorPanel from './components/TutorPanel.jsx'
-import CheckCard from './components/CheckCard.jsx'
-import { Card, Chip, Button, Feedback } from './components/ui.jsx'
+import CapabilityProfile from './components/CapabilityProfile.jsx'
+import NoticeBanner from './components/NoticeBanner.jsx'
+import ProjectWorkspace from './project/ProjectWorkspace.jsx'
+import { Confirm } from './components/ui.jsx'
+import { CAP_SHORT } from './engine/capabilities.js'
 
-const LAYER_LABEL = { intuition: '直觉', example: '例子', formal: '形式化' }
+const course = courseList[0]
 
-/**
- * Stand-in for a concept the learner model does not know about yet.
- *
- * Switching courses leaves one render where `course` is the new course but the
- * model is still the old one, so the lookup misses. Hooks below read this object
- * — including inside dependency arrays, which are evaluated during render — so
- * it has to be a real object rather than undefined, or the whole app throws and
- * blanks out.
- */
-const PENDING_STATE = Object.freeze({
-  mastery: 0, attempts: 0, correct: 0, evidence: [], misconceptions: {},
-  seenExplain: false, layersSeen: [], completedAt: null,
-})
-
-/** Slider moves that reverse direction this often within the window count as thrashing. */
-const THRASH_FLIPS = 4
-const THRASH_WINDOW_MS = 20000
+function useWidth() {
+  const [w, setW] = useState(() => window.innerWidth)
+  useEffect(() => {
+    const on = () => setW(window.innerWidth)
+    window.addEventListener('resize', on)
+    return () => window.removeEventListener('resize', on)
+  }, [])
+  return w
+}
 
 export default function App() {
-  const [courseId, setCourseId] = useState(courseList[0].id)
-  const course = courseList.find((c) => c.id === courseId)
   const L = useLearner(course)
-  const [alert, setAlert] = useState(null)
-  const [openLayers, setOpenLayers] = useState({})
-  // The question currently being answered, pinned as an object rather than an
-  // id: a generated practice question exists nowhere else. Without the pin,
-  // answering changes what the policy wants next, the card unmounts, and the
-  // explanation of why the answer was right flashes past unread.
-  const [pinned, setPinned] = useState(null)
-  // Bumped each time the learner moves past a question, so a re-asked check
-  // with the same id comes back as a fresh card rather than the answered one.
-  const [checkRound, setCheckRound] = useState(0)
-  // The layer the policy opened because the learner kept getting it wrong.
-  const [scaffold, setScaffold] = useState(null)
-  // What the tutor can see. Tagged with the concept they came from: a new lab
-  // reports before the shell's own effects run, so resetting on navigation
-  // would wipe the fresh report instead of the stale one.
+  const learner = L.learner
+  const latest = useRef(learner)
+  latest.current = learner
+
+  const viewId = learner.currentConceptId
+  const isProject = viewId === course.project?.id
+  const concept = isProject ? null : course.concepts.find((c) => c.id === viewId) ?? course.concepts[0]
+  const tutorConcept = useMemo(() => (isProject ? getConcept(course.id, course.project.id) : concept), [isProject, concept])
+
+  // --- layout ----------------------------------------------------------------------------
+  const width = useWidth()
+  const [navPref, setNavPref] = useState(null)
+  const [tutorPref, setTutorPref] = useState(null)
+  const navCollapsed = navPref ?? width < 1180
+  const tutorCollapsed = tutorPref ?? width < 960
+
+  // --- the tutor bus -----------------------------------------------------------------------
+  const [focus, setFocus] = useState('explain')
   const [labScreen, setLabScreen] = useState(null)
   const [checkScreen, setCheckScreen] = useState(null)
-  const [focus, setFocus] = useState('explain')
+  const [projectScreen, setProjectScreen] = useState(null)
+  const [task, setTask] = useState(null)
+  const [gate, setGate] = useState(null)
+  const [alert, setAlert] = useState(null)
+  const [inline, setInline] = useState({})
+  const [profile, setProfile] = useState(null)
+  const [confirm, setConfirm] = useState(null)
+  const previous = useRef([])
   const activity = useRef({ lastAt: Date.now(), interacted: false, thrash: null, sliders: new Map() })
-  const checkRef = useRef(null)
-  const scaffoldMark = useRef(null)
+  const sliderTimers = useRef(new Map())
 
-  const concept = course.concepts.find((c) => c.id === L.learner.currentConceptId) ?? course.concepts[0]
-  const modelReady = L.learner.courseId === course.id
-  const state = L.learner.concepts[concept.id] ?? PENDING_STATE
-  const status = L.statusOf(concept.id)
-  const action = L.action
-  const Lab = concept.lab ? getLab(concept.lab.type) : null
-  const idx = course.concepts.indexOf(concept)
-
-  const misconceptionHistory = useMemo(
-    () => L.misconceptionsOf(concept.id).map((m) => m.id),
-    // Not `L`: that object is new on every render, which would make the tutor's
-    // alert effect restart its request whenever anything re-renders.
-    [L.misconceptionsOf, concept.id],
-  )
-
-  const learnerState = useMemo(
-    () => ({ mastery: state.mastery, attempts: state.attempts, correct: state.correct }),
-    [state.mastery, state.attempts, state.correct],
-  )
-
-  // The intuition is always open at the top of the page, so arriving at a
-  // concept is having been shown it. Without this the policy kept saying "first
-  // build the intuition" until the learner happened to expand another layer.
-  useEffect(() => {
-    if (modelReady) L.explained(concept.id, 'intuition')
-  }, [modelReady, concept.id, L.explained])
-
-  // A fresh concept starts with a quiet tutor and no activity on record.
+  // A new step starts with a quiet tutor and nothing on record from the last one.
   useEffect(() => {
     activity.current = { lastAt: Date.now(), interacted: false, thrash: null, sliders: new Map() }
-    setFocus('explain')
-  }, [concept.id])
+    previous.current = []
+    setFocus(isProject ? 'project' : 'explain')
+    setAlert(null)
+    setInline({})
+    setLabScreen(null)
+    setCheckScreen(null)
+    setProjectScreen(null)
+  }, [viewId, isProject])
 
-  /**
-   * Evidence from a lab.
-   *
-   * The lab has already told the learner whether they were right — that came
-   * from the maths and was instant. What happens here is bookkeeping plus, on a
-   * mistake, waking the tutor to explain why. An `ungraded` observation (the
-   * grader was unreachable) is deliberately not recorded: a network failure must
-   * not move the mastery estimate.
-   */
-  const handleEvidence = useCallback((obs) => {
-    if (obs.kind === 'ungraded') return
-    L.record({
-      conceptId: concept.id,
-      kind: obs.kind,
-      correct: obs.correct,
-      // Labs can name a misconception that only another concept catalogues;
-      // recording it here would stall this one.
-      misconceptionId: (concept.misconceptions ?? []).some((m) => m.id === obs.misconceptionId)
-        ? obs.misconceptionId
-        : null,
-      detail: obs.detail,
+  // Time in a background tab is not time spent stuck.
+  useEffect(() => {
+    const on = () => { if (document.visibilityState === 'visible') activity.current.lastAt = Date.now() }
+    document.addEventListener('visibilitychange', on)
+    return () => document.removeEventListener('visibilitychange', on)
+  }, [])
+
+  // Earlier lab states belong to the task they came from.
+  useEffect(() => { previous.current = [] }, [task?.key])
+
+  const reportLab = useCallback((s) => {
+    setLabScreen((old) => {
+      if (old && old.conceptId === viewId && JSON.stringify(old.facts) !== JSON.stringify(s.facts)) {
+        previous.current = [...previous.current, { doing: old.doing, facts: old.facts ?? [], at: old.at }].slice(-3)
+      }
+      return { ...s, conceptId: viewId, at: Date.now() }
     })
-    if (!obs.correct && obs.facts?.length) {
-      // Authored words to fall back on if the model is unreachable, so a lab
-      // mistake is never answered by an error message: the belief this action
-      // suggests when the lab tagged one, otherwise a pointer back to the result.
-      const belief = (concept.misconceptions ?? []).find((m) => m.id === obs.misconceptionId)?.belief
-      const fallback = belief
-        ? `你可能是这样想的：「${belief}」。对照实验里刚显示的结果，看看这个想法哪里站不住。`
-        : '对照实验里刚显示的结果，看看它和你的判断差在哪一步。'
-      setAlert({ kind: 'lab', facts: obs.facts, description: obs.description, retry: Boolean(obs.retry), fallback, at: Date.now() })
-    }
-  }, [L, concept])
-
-  /**
-   * A wrong answer to a check. The card has already said "wrong" and lets the
-   * learner retry; the tutor panel says why. `fallback` is authored text shown
-   * if the model is unreachable, so the panel is never silent after a mistake.
-   * It names the suspected belief, never the right option.
-   */
-  const handleWrongAnswer = useCallback((info) => {
-    const { check } = info
-    const misId = (info.choice !== undefined ? check.options?.[info.choice]?.misconception : null)
-      ?? check.misconceptions?.[0]
-    const belief = (concept.misconceptions ?? []).find((m) => m.id === misId)?.belief
-    const fallback = belief
-      ? `你可能是这样想的：「${belief}」。对照上面的讲解想一想，这个想法哪里站不住。`
-      : '回到上面讲解里的「例子」和「形式化」两部分，对照题目里的条件再看一遍。'
-    setAlert({
-      kind: 'check', checkId: check.id, choice: info.choice, verdict: info.verdict,
-      feedback: info.feedback, fallback, at: Date.now(),
+  }, [viewId])
+  const reportCheck = useCallback((s) => setCheckScreen(s ? { ...s, conceptId: viewId } : null), [viewId])
+  const reportProject = useCallback((s) => setProjectScreen(s ? { ...s, conceptId: viewId } : null), [viewId])
+  const onInline = useCallback((object, payload) => {
+    setInline((m) => {
+      if (!payload) { const { [object]: _, ...rest } = m; return rest }
+      return { ...m, [object]: payload }
     })
-  }, [concept])
-
-  // Stable, so the tutor panel's alert effect does not restart its request on
-  // every unrelated re-render of the app.
+  }, [])
   const clearAlert = useCallback(() => setAlert(null), [])
 
-  const onLabScreen = useCallback((s) => setLabScreen({ ...s, conceptId: concept.id }), [concept.id])
-  const onCheckScreen = useCallback((s) => setCheckScreen({ ...s, conceptId: concept.id }), [concept.id])
-
-  const openLayer = (layer) => {
-    const key = `${concept.id}:${layer}`
-    setOpenLayers((o) => ({ ...o, [key]: !o[key] }))
-    L.explained(concept.id, layer)
-  }
-
-  const isOpen = (layer) => Boolean(openLayers[`${concept.id}:${layer}`]) || layer === 'intuition'
-
-  // Repeated wrong answers: the policy asks for the explanation from an angle
-  // not yet read. Open that layer for the learner rather than only saying so —
-  // once per new piece of evidence, since opening it changes which layer the
-  // policy would name next.
-  useEffect(() => {
-    if (action.type !== 'explain' || !action.scaffold || action.conceptId !== concept.id) return
-    const mark = `${concept.id}:${state.evidence.length}`
-    if (scaffoldMark.current === mark) return
-    scaffoldMark.current = mark
-    setOpenLayers((o) => ({ ...o, [`${concept.id}:${action.layer}`]: true }))
-    setScaffold({ conceptId: concept.id, layer: action.layer })
-    L.explained(concept.id, action.layer)
-  }, [action, concept.id, state.evidence.length, L.explained])
-
-  // The generated question this concept would ask next, if it has a generator.
-  const seed = practiceSeed(L.learner, concept.id)
-  const practiceCheck = useMemo(
-    () => (concept.practice ? generatePractice(concept.practice, seed) : null),
-    [concept.practice, seed],
+  const learnerState = useMemo(() => {
+    const js = learner.judgements.filter((j) => j.conceptId === viewId && j.correct !== null)
+    return { attempts: js.length, correct: js.filter((j) => j.correct).length, firstTryWrong: js.filter((j) => j.firstTry && !j.correct).length }
+  }, [learner.judgements, viewId])
+  const misconceptionHistory = useMemo(
+    () => L.misconceptionsOf(viewId).map((m) => `${m.id}（${m.status === 'supported' ? '有证据支持' : '待核实'}）`),
+    [L.misconceptionsOf, viewId], // eslint-disable-line react-hooks/exhaustive-deps
   )
 
-  // Which question to put in front of the learner: the pinned one while an
-  // answer is on screen; otherwise whichever the policy names; otherwise the
-  // first unanswered one; otherwise — while the concept is not yet mastered —
-  // fresh practice or a check to review. That last case matters while the
-  // policy is busy remediating or re-explaining: without it the page shows no
-  // question at all and the learner has nothing to click.
-  const policyCheck = action.conceptId === concept.id
-    ? (action.type === 'check' ? action.check : action.type === 'practice' ? practiceCheck : null)
-    : null
-  const firstOpen = (concept.checks ?? []).find((c) => !(state.evidence ?? []).some((e) => e.correct && e.detail?.checkId === c.id))
-  const fallbackCheck = status !== 'mastered' ? (practiceCheck ?? reviewCheck(L.learner, concept)) : null
-  const activeCheck = (pinned?.conceptId === concept.id ? pinned.check : null)
-    ?? policyCheck ?? firstOpen ?? fallbackCheck
-
-  // What the tutor sees: the lab's latest report, the question being answered,
-  // and which of the two the learner last touched.
+  /** What the tutor sees. Only what is on screen right now, plus earlier states of the same task. */
   const screen = useMemo(() => {
-    const lab = labScreen?.conceptId === concept.id ? labScreen : null
-    const chk = checkScreen?.conceptId === concept.id && checkScreen.checkId === activeCheck?.id ? checkScreen : null
+    if (isProject) return { focus: 'project', ...(projectScreen ?? {}), lab: null, check: null }
+    const lab = labScreen?.conceptId === viewId ? labScreen : null
+    const chk = checkScreen?.conceptId === viewId ? checkScreen : null
     return {
       focus,
       lab: lab ? { doing: lab.doing, facts: lab.facts ?? [], moment: lab.moment ?? null } : null,
-      check: chk ? { id: chk.checkId, prompt: chk.prompt, kind: chk.kind, eliminated: chk.eliminated, draft: chk.draft, table: chk.table } : null,
+      check: chk && (focus === 'check' || focus === 'verify')
+        ? { id: chk.checkId, prompt: chk.prompt, kind: chk.kind, eliminated: chk.eliminated, draft: chk.draft, table: chk.table, diagram: chk.diagram }
+        : null,
     }
-  }, [labScreen, checkScreen, focus, concept.id, activeCheck?.id])
+  }, [isProject, projectScreen, labScreen, checkScreen, focus, viewId])
+
+  /** The part of the screen the server needs, tagged with the task. */
+  const screenPayload = useCallback((t, helpSoFar) => {
+    const s = screen
+    const task = t ? {
+      label: t.label, activity: t.activity, attempt: t.attempt ?? '', capability: t.capability ?? '',
+      capabilityStatus: t.capabilityStatus ?? '', helpSoFar,
+    } : null
+    if (s.focus === 'project') {
+      return { focus: 'project', doing: s.doing ?? '', facts: s.facts ?? [], previous: [], check: null, code: s.code ?? null, task }
+    }
+    return {
+      focus: s.focus === 'verify' ? 'check' : s.focus,
+      doing: s.lab?.doing ?? null,
+      facts: s.lab?.facts ?? [],
+      previous: s.focus === 'lab' ? previous.current.map((p) => ({ doing: p.doing, facts: p.facts, ago: Math.round((Date.now() - p.at) / 1000) })) : [],
+      check: s.check ?? null,
+      task,
+    }
+  }, [screen])
 
   /**
-   * Activity in the main column, for the tutor's "you seem stuck" nudges: when
-   * the learner last did anything, and whether a slider is being dragged back
-   * and forth — the visible sign of searching without knowing what for.
+   * Independent attempts still being verified anywhere in the course: open, not
+   * converted, and with no rated submission yet. Help asked for elsewhere may
+   * well be help for one of these, so it asks first too.
+   */
+  const pendingIndependent = useMemo(() => Object.values(learner.attempts).filter((a) => a.status === 'open'
+    && a.resources === 'independent' && !a.converted
+    && !learner.judgements.some((j) => j.attemptId === a.id && j.correct !== null)), [learner.attempts, learner.judgements])
+  const pendingRef = useRef(pendingIndependent)
+  pendingRef.current = pendingIndependent
+
+  /**
+   * May help be given now? Resolves at once unless an independent attempt is
+   * being verified; then the learner decides. A yes converts every such attempt
+   * to assisted practice (answers kept) and resolves with their ids, so the
+   * help can be recorded against them; a no resolves false.
+   */
+  const gateRef = useRef(gate)
+  gateRef.current = gate
+  const requestHelp = useCallback((kind) => new Promise((resolve) => {
+    const g = gateRef.current
+    const targets = pendingRef.current.map((a) => ({ id: a.id, conceptId: a.conceptId, label: a.label ?? '一次独立验证', kind: a.activity }))
+    if (g && !targets.some((t) => t.id === g.attemptId)) targets.unshift({ id: g.attemptId, conceptId: g.conceptId, label: g.label, kind: g.kind })
+    if (!targets.length) { resolve({ converted: [] }); return }
+    const here = g ? { ...targets.find((t) => t.id === g.attemptId), label: g.label } : null
+    const elsewhere = targets.filter((t) => t.id !== here?.id)
+    setConfirm({
+      title: '现在请求帮助，会把进行中的独立验证转为辅助练习',
+      body: `${here ? `${here.label}正在进行。` : `你还有一次独立验证没有完成（${elsewhere.map((t) => `「${t.label.replace(/^独立验证：/, '')}」`).join('、')}），这里的帮助也可能用在那里。`}${kind === 'explain' ? '展开讲解' : '向 AI 老师求助'}之后，它不再计入独立验证；已经填的内容都会保留，之后会换没见过的题目或数据再验证。也可以先不求助，继续独立完成。`,
+      confirmLabel: '转为辅助练习并获得帮助',
+      cancelLabel: '继续独立完成',
+      onConfirm: () => {
+        setConfirm(null)
+        for (const t of targets) {
+          L.convertAttempt(t.id)
+          L.event({ conceptId: t.conceptId, object: t.kind, action: 'converted-to-practice', attemptId: t.id, detail: { via: kind, from: viewId } })
+        }
+        resolve({ converted: targets.map((t) => t.id) })
+      },
+      onCancel: () => {
+        setConfirm(null)
+        for (const t of targets) L.event({ conceptId: t.conceptId, object: t.kind, action: 'declined-help', attemptId: t.id, detail: { via: kind, from: viewId } })
+        resolve(false)
+      },
+    })
+  }), [L, viewId])
+
+  const attemptIdFor = useCallback((key) => (key ? attemptFor(latest.current, key)?.id ?? null : null), [])
+
+  /**
+   * Activity in the main column: when the learner last did anything, sliders
+   * moved back and forth, and — as behaviour events — the values sliders are
+   * left at. None of it is scored.
    */
   const noteActivity = useCallback((e) => {
     const a = activity.current
@@ -242,189 +231,131 @@ export default function App() {
     if (dir && t.dir && dir !== t.dir) t.flips.push(Date.now())
     if (dir) t.dir = dir
     t.v = v
-    t.flips = t.flips.filter((ts) => Date.now() - ts < THRASH_WINDOW_MS)
-    if (t.flips.length >= THRASH_FLIPS) {
+    t.flips = t.flips.filter((ts) => Date.now() - ts < TUTOR_POLICY.thrashWindowMs)
+    if (t.flips.length >= TUTOR_POLICY.thrashFlips) {
       a.thrash = { label, at: Date.now() }
       t.flips = []
     }
     a.sliders.set(label, t)
-  }, [])
+    clearTimeout(sliderTimers.current.get(label))
+    sliderTimers.current.set(label, setTimeout(() => {
+      L.event({ conceptId: viewId, object: `slider:${label}`, action: 'set', detail: { value: v } })
+    }, 900))
+  }, [L, viewId])
 
-  // One render can elapse between selecting a course and its model loading.
-  // Every hook above has already run, so returning here is safe.
-  if (!modelReady) return null
+  const labAttemptIds = useMemo(
+    () => Object.values(learner.attempts).filter((a) => a.conceptId === viewId && a.activity === 'lab').map((a) => a.id),
+    [learner.attempts, viewId],
+  )
+  /** Questions open on this page: help asked for while they are visible may be used on them. */
+  const openGuidedIds = useMemo(
+    () => Object.values(learner.attempts).filter((a) => a.conceptId === viewId && a.status === 'open' && ['check', 'practice', 'project'].includes(a.activity)).map((a) => a.id),
+    [learner.attempts, viewId],
+  )
 
-  const nextConcept = course.concepts[idx + 1]
-  const canAdvance = status === 'mastered' && nextConcept
-  const unpinAndGo = (id) => { L.goTo(id); setAlert(null); setPinned(null) }
+  const bus = useMemo(() => ({
+    focus, setFocus, setTask, setGate, raiseAlert: (a) => setAlert({ ...a, at: Date.now() }),
+    reportLab, reportCheck, reportProject, openProfile: (id) => setProfile(id ?? true),
+    learnerState, misconceptionHistory, screenPayload: screenPayload(task, []),
+  }), [focus, reportLab, reportCheck, reportProject, learnerState, misconceptionHistory, screenPayload, task])
+
+  // --- navigation, export, reset ---------------------------------------------------------------
+  const go = useCallback((id) => {
+    L.goTo(id)
+    L.event({ conceptId: id, object: 'nav', action: 'open' })
+    setProfile(null)
+  }, [L])
+
+  const versions = () => ({
+    course: course.version, generator: GENERATOR_VERSION, tutorPolicy: TUTOR_POLICY.version,
+    runtime: RUNTIME_LIMITS.version, projectGrading: PROJECT_GRADING_VERSION, runtimeNote: RUNTIME_LIMITS.note,
+  })
+  const doExport = () => {
+    const pkg = L.exportNow({ versions: versions() })
+    const blob = new Blob([JSON.stringify(pkg, null, 2)], { type: 'application/json' })
+    const a = document.createElement('a')
+    a.href = URL.createObjectURL(blob)
+    a.download = `learnai-${course.id}-${learner.learnerId}-${new Date().toISOString().slice(0, 10)}.json`
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    setTimeout(() => URL.revokeObjectURL(a.href), 5000)
+    L.event({ conceptId: viewId, object: 'record', action: 'export' })
+  }
+  const askReset = () => setConfirm({
+    title: '重置进度？',
+    body: '当前的全部记录（作答、帮助、代码、对话）会存成一份备份，然后从头开始。建议先点「导出记录」保存一份文件。',
+    confirmLabel: '重置',
+    cancelLabel: '取消',
+    onConfirm: () => { setConfirm(null); L.reset() },
+    onCancel: () => setConfirm(null),
+  })
+
+  const statusOf = (id) => {
+    if (course.project?.id === id) {
+      const s = projectSummary(learner, course)
+      const before = (course.project.prerequisites ?? []).find((pid) => !L.doneOf(pid))
+      return { key: s.key, label: s.short, review: false, suggest: before ? course.concepts.find((c) => c.id === before)?.shortTitle : null }
+    }
+    const c = course.concepts.find((x) => x.id === id)
+    const cap = L.capabilityOf(id)
+    const suggest = L.suggestedFirstOf(id)[0]
+    if (!c.verify) {
+      const done = L.doneOf(id)
+      return { key: done ? 'done' : cap.status === 'unverified' ? 'unverified' : 'learning', label: done ? '引导学习完成（本步不验证）' : cap.status === 'unverified' ? '未开始' : '学习中', suggest: suggest?.shortTitle ?? suggest?.title }
+    }
+    return { key: cap.status, label: cap.status === 'unverified' ? '未开始' : CAP_SHORT[cap.status], review: cap.review, suggest: suggest?.shortTitle ?? suggest?.title }
+  }
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: 'var(--bg)' }}>
-      <Header
-        course={course}
-        courses={courseList}
-        onCourseChange={(id) => { setCourseId(id); setAlert(null); setPinned(null) }}
-        progress={L.progress}
-        onReset={() => { L.reset(); setAlert(null); setPinned(null) }} />
+      <Header course={course} progress={L.progress} saveState={L.saveState} onRetrySave={L.retrySave}
+              onExport={doExport} onProfile={() => setProfile(true)} onReset={askReset} />
+      <NoticeBanner notice={L.notice} onDismiss={L.dismissNotice} />
 
       <div style={{ flex: 1, display: 'flex', alignItems: 'stretch', minHeight: 0 }}>
-        <ConceptNav course={course} learner={L.learner} statusOf={L.statusOf}
-                    currentId={concept.id} onSelect={unpinAndGo} />
+        <ConceptNav course={course} currentId={viewId} statusOf={statusOf} onSelect={go}
+                    collapsed={navCollapsed} onToggle={() => setNavPref(!navCollapsed)} />
 
-        <main className="scroll-y"
+        <main className="scroll-y" id="main"
               onPointerDownCapture={noteActivity} onKeyDownCapture={noteActivity} onInputCapture={noteActivity}
-              style={{
-                flex: 1, minWidth: 0, padding: '18px 22px 40px',
-                display: 'flex', flexDirection: 'column', gap: 16,
-              }}>
-          <div style={{
-            display: 'flex', alignItems: 'flex-start', gap: 20,
-            background: 'linear-gradient(180deg,#F1F6FF 0%,#EAF1FF 100%)',
-            border: '1px solid #DCE7FA', borderRadius: 13, padding: '20px 24px',
-          }}>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-                <span style={{ fontSize: 12, color: 'var(--brand)', fontWeight: 500 }}>
-                  第 {idx + 1} / {course.concepts.length} 步
-                </span>
-                {concept.chapter && <span style={{ fontSize: 12, color: 'var(--muted)' }}>{concept.chapter}</span>}
-                <Chip tone={status === 'mastered' ? 'ok' : 'brand'}>
-                  {status === 'mastered' ? '已掌握' : `掌握度 ${Math.round(state.mastery * 100)}%`}
-                </Chip>
-              </div>
-              <h1 style={{ margin: 0, fontSize: 21, fontWeight: 700, color: 'var(--ink-strong)', letterSpacing: '-0.3px' }}>
-                {concept.title}
-              </h1>
-              <div style={{ fontSize: 13, color: 'var(--ink-soft)', marginTop: 8, lineHeight: 1.8 }}>
-                {concept.objectives.map((o, i) => (
-                  <div key={i}>· {o}</div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* The policy's reasoning, shown rather than hidden. */}
-          <div data-testid="policy-why" style={{
-            display: 'flex', alignItems: 'center', gap: 10, padding: '11px 16px',
-            background: '#fff', border: '1px solid var(--border)', borderRadius: 11,
-          }}>
-            <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--brand)', flex: 'none' }} />
-            <span style={{ fontSize: 12.5, color: 'var(--ink-mid)' }}>
-              {/* The policy speaks about the course. When the learner has navigated
-                  back to a concept they already finished, that message belongs to a
-                  different step and reads as a non-sequitur here. */}
-              {status === 'mastered'
-                ? `「${concept.title}」已掌握，你在复习。实验室随时可以再练。`
-                : action.why}
-            </span>
-            <div style={{ flex: 1 }} />
-            {/* The question sits below the explanation and the lab, often off
-                screen. Point at it rather than leaving the learner to scroll. */}
-            {activeCheck && status !== 'mastered' && (
-              <Button variant="primary" style={{ height: 30, fontSize: 12.5, flex: 'none' }}
-                onClick={() => checkRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })}>
-                去做题 ↓
-              </Button>
-            )}
-            <span style={{ fontSize: 11.5, color: 'var(--muted-light)', flex: 'none' }}>
-              掌握度到 {Math.round(MASTERY_THRESHOLD * 100)}%、每道题都做对过，解锁下一步
-            </span>
-          </div>
-
-          {/* Layered explanation. Intuition is always open; the rest unfold. */}
-          <div onPointerDownCapture={() => setFocus('explain')}>
-            <Card title="讲解">
-              {LAYERS.map((layer) => {
-                const body = concept.explain[layer]
-                if (!body) return null
-                const open = isOpen(layer)
-                const suggested = scaffold?.conceptId === concept.id && scaffold.layer === layer
-                return (
-                  <div key={layer} data-layer={layer} style={{ borderTop: layer === 'intuition' ? 'none' : '1px solid var(--border-faint)', paddingTop: layer === 'intuition' ? 0 : 12, marginTop: layer === 'intuition' ? 0 : 12 }}>
-                    <button onClick={() => layer !== 'intuition' && openLayer(layer)}
-                      style={{
-                        display: 'flex', alignItems: 'center', gap: 8, background: 'none', border: 'none',
-                        padding: 0, marginBottom: open ? 8 : 0,
-                        cursor: layer === 'intuition' ? 'default' : 'pointer',
-                      }}>
-                      <Chip tone={open ? 'brand' : 'neutral'}>{LAYER_LABEL[layer]}</Chip>
-                      {suggested && <Chip tone="warn">换个角度再看一遍</Chip>}
-                      {layer !== 'intuition' && (
-                        <span style={{ fontSize: 12, color: 'var(--muted)' }}>{open ? '收起' : '展开'}</span>
-                      )}
-                    </button>
-                    {open && (
-                      <div className="fade-up" style={{ fontSize: 13.5, lineHeight: 1.95, color: 'var(--ink-mid)', textWrap: 'pretty' }}>
-                        {body}
-                      </div>
-                    )}
-                  </div>
-                )
-              })}
-            </Card>
-          </div>
-
-          {/* Remediation takes the floor when a misconception is live. */}
-          {action.type === 'remediate' && action.conceptId === concept.id && action.misconception && (
-            <Feedback tone="warn" title="先把这个理清楚">
-              你可能以为：<b>{action.misconception.belief}</b>
-              <div style={{ marginTop: 8 }}>{action.misconception.correction}</div>
-            </Feedback>
-          )}
-
-          {Lab && (
-            <div data-testid="lab" onPointerDownCapture={() => setFocus('lab')}>
-              <div style={{ fontSize: 12.5, color: 'var(--muted)', marginBottom: 10 }}>动手实验</div>
-              <Lab key={concept.id} config={concept.lab.config} onEvidence={handleEvidence} onScreen={onLabScreen} />
-            </div>
-          )}
-
-          {activeCheck && (
-            <div ref={checkRef} onPointerDownCapture={() => setFocus('check')} onFocusCapture={() => setFocus('check')}>
-              <CheckCard
-                key={`${concept.id}:${activeCheck.id}:${checkRound}`}
-                course={course}
-                concept={concept}
-                check={activeCheck}
-                learnerState={learnerState}
-                misconceptionHistory={misconceptionHistory}
-                screen={screen}
-                onEvidence={handleEvidence}
-                onScreen={onCheckScreen}
-                onAnswered={() => setPinned({ conceptId: concept.id, check: activeCheck })}
-                onWrong={handleWrongAnswer}
-                onContinue={() => { setPinned(null); setCheckRound((r) => r + 1) }} />
-            </div>
-          )}
-
-          {status === 'mastered' && (
-            <Feedback tone="ok" title={`「${concept.title}」已掌握`}>
-              {nextConcept
-                ? <>下一个概念「{nextConcept.title}」已解锁。</>
-                : <>这门课的每个概念都达到了掌握标准。{course.conclusion}</>}
-              {canAdvance && (
-                <div style={{ marginTop: 12 }}>
-                  <Button variant="primary" onClick={() => unpinAndGo(nextConcept.id)}>
-                    进入「{nextConcept.title}」
-                  </Button>
-                </div>
-              )}
-            </Feedback>
+              style={{ flex: 1, minWidth: 0, padding: '16px 20px 40px' }}>
+          {isProject ? (
+            <ProjectWorkspace course={course} L={L} bus={bus} />
+          ) : (
+            <ConceptView key={concept.id} course={course} concept={concept} L={L} bus={bus}
+                         requestHelp={requestHelp} inlineFor={(o) => inline[o] ?? null} onNavigate={go} />
           )}
         </main>
 
         <TutorPanel
           course={course}
-          concept={concept}
-          learnerState={learnerState}
-          misconceptionHistory={misconceptionHistory}
-          mastered={status === 'mastered'}
+          concept={tutorConcept}
+          L={L}
           screen={screen}
-          activity={activity}
+          screenPayload={screenPayload}
+          task={task}
           alert={alert}
           onAlertHandled={clearAlert}
-          attemptsInStep={state.attempts} />
+          activity={activity}
+          requestHelp={requestHelp}
+          gate={gate}
+          collapsed={tutorCollapsed}
+          onToggle={() => setTutorPref(!tutorCollapsed)}
+          onInline={onInline}
+          attemptIdFor={attemptIdFor}
+          labAttemptIds={labAttemptIds}
+          openGuidedIds={openGuidedIds}
+          learnerState={learnerState}
+          misconceptionHistory={misconceptionHistory} />
       </div>
+
+      <CapabilityProfile open={Boolean(profile)} focus={typeof profile === 'string' ? profile : null} course={course}
+                         profile={L.profile()} misconceptionsOf={L.allMisconceptionsOf}
+                         projectSummary={projectSummary(learner, course).rows}
+                         onClose={() => setProfile(null)} onGo={go} />
+      <Confirm open={Boolean(confirm)} title={confirm?.title} confirmLabel={confirm?.confirmLabel} cancelLabel={confirm?.cancelLabel}
+               onConfirm={confirm?.onConfirm} onCancel={confirm?.onCancel}>{confirm?.body}</Confirm>
     </div>
   )
 }

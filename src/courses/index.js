@@ -11,5 +11,13 @@ import { decisionTreeCourse } from './decisionTree.js'
 export const courseList = [decisionTreeCourse]
 export const courses = Object.fromEntries(courseList.map((c) => [c.id, c]))
 export const getCourse = (id) => courses[id] ?? null
-export const getConcept = (courseId, conceptId) =>
-  getCourse(courseId)?.concepts.find((c) => c.id === conceptId) ?? null
+/**
+ * A concept by id — or the course project, which the tutor treats like a
+ * concept (it has a title, objectives, an explanation and misconceptions).
+ */
+export const getConcept = (courseId, conceptId) => {
+  const course = getCourse(courseId)
+  if (!course) return null
+  return course.concepts.find((c) => c.id === conceptId)
+    ?? (course.project?.id === conceptId ? { ...course.project, checks: [] } : null)
+}

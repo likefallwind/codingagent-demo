@@ -14,7 +14,7 @@
  */
 
 import {
-  buildFromSpec, ILLUSTRATIVE_SPEC, counts, rankFeatures, learningCurve, grow, errRate, leafCount,
+  buildFromSpec, ILLUSTRATIVE_SPEC, counts, rankFeatures, learningCurve, grow, errRate, leafCount, splitLabel,
 } from './cart.js'
 import { SAMPLES, FEATURES, PEEL_LABEL, DEPTHS, generatePopulation, holdout, classLabel } from './dataset.js'
 import { makeRng, intIn, shuffle, sample } from '../rng.js'
@@ -84,13 +84,87 @@ function leafRoute(seed) {
   }
 }
 
+/**
+ * Read a tree the learner has never seen: grown by the real algorithm on a new
+ * sample from another orchard, sometimes without the peel feature so the root
+ * question changes, then asked where a new fruit lands. Weights sit on a
+ * threshold now and then, where reading "≤" carefully is the whole question.
+ */
+function routeNewTree(seed) {
+  const rnd = makeRng(seed)
+  const featureSets = [null, ['w', 'aroma'], ['w', 'peel'], null]
+  for (let tries = 0; tries < 300; tries++) {
+    const keys = featureSets[(seed + tries) % featureSets.length]
+    const rows = sample(generatePopulation(30000 + seed * 3 + tries, 160), 48, rnd)
+    const tree = grow(rows, 0, 2, 3, keys)
+    const leaves = []
+    const walk = (n, key) => {
+      if (!n.split) { leaves.push({ key, node: n }); return }
+      walk(n.left, `${key}L`)
+      walk(n.right, `${key}R`)
+    }
+    walk(tree, 'r')
+    if (leaves.length < 3 || !tree.split) continue
+    if (new Set(leaves.map((l) => l.node.cls)).size < 2) continue
+
+    const thresholds = []
+    const collect = (n) => { if (n.split) { if (n.split.key === 'w') thresholds.push(n.split.thr); collect(n.left); collect(n.right) } }
+    collect(tree)
+    const w = thresholds.length && rnd() < 0.45 ? thresholds[intIn(rnd, 0, thresholds.length - 1)] + intIn(rnd, -1, 1) : intIn(rnd, 118, 262)
+    const fruit = { w, peel: intIn(rnd, 1, 3), aroma: rnd() < 0.6 ? 1 : 0 }
+
+    let n = tree
+    let key = 'r'
+    const path = []
+    while (n.split) {
+      const yes = fruit[n.split.key] <= n.split.thr
+      path.push(`${splitLabel(n.split.key, n.split.thr)}？${yes ? '是' : '否'}`)
+      key += yes ? 'L' : 'R'
+      n = yes ? n.left : n.right
+    }
+    if (path.length < 2 && rnd() < 0.7) continue // mostly routes that ask two questions
+
+    const mark = ['①', '②', '③', '④']
+    const name = new Map(leaves.map((l, i) => [l.key, mark[i]]))
+    const leafText = (l) => {
+      const c = counts(l.node.rows)
+      return `叶子 ${name.get(l.key)}：判为${classLabel(l.node.cls)}（${c.n} 个样本：${c.a} 苹果 / ${c.o} 橙子）`
+    }
+    const diagram = []
+    const draw = (node, key, indent, branch) => {
+      const head = indent + branch
+      if (!node.split) { diagram.push(`${head}${leafText({ key, node })}`); return }
+      diagram.push(`${head}${splitLabel(node.split.key, node.split.thr)} ？`)
+      const pad = indent + (branch ? (branch.startsWith('├') ? '│   ' : '    ') : '')
+      draw(node.left, `${key}L`, pad, '├─ 是 → ')
+      draw(node.right, `${key}R`, pad, '└─ 否 → ')
+    }
+    draw(tree, 'r', '', '')
+
+    const desc = `重量 ${fruit.w} g，果皮${PEEL_LABEL[fruit.peel]}，${fruit.aroma ? '有' : '无'}果香`
+    return {
+      prompt: `另一个果园的 ${rows.length} 个水果上，算法长出了下面这棵两层的树。新来一个水果：${desc}。它会落进哪个叶子？`,
+      diagram,
+      options: leaves.map((l) => ({ text: leafText(l), correct: l.key === key })),
+      explain: `${path.join(' → ')}，落进叶子 ${name.get(key)}。注意「≤」：正好等于阈值也走「是」。`,
+      facts: [...diagram, `这个水果：${desc}`],
+    }
+  }
+  return routeNewTree(seed + 7)
+}
+
 // ---------------------------------------------------------------- step 2
 
-/** Gini of a node, or which of three cuts gains the most. Alternates by seed. */
-function giniPractice(seed) {
+/**
+ * Gini of a node, or which of three cuts gains the most. Alternates by seed
+ * unless `config.variant` pins one ('value' | 'compare') — verification asks
+ * only the comparison, which is the capability; the arithmetic alone is not.
+ */
+function giniPractice(seed, config = {}) {
   const rnd = makeRng(seed)
+  const variant = config.variant ?? (seed % 2 === 0 ? 'value' : 'compare')
 
-  if (seed % 2 === 0) {
+  if (variant === 'value') {
     const n = intIn(rnd, 5, 16)
     let a = intIn(rnd, 1, n - 1)
     if (a * 2 === n && rnd() < 0.7) a = Math.max(1, a - 1) // 50/50 is the one they already know
@@ -136,7 +210,7 @@ function giniPractice(seed) {
       facts: scored.map((c) => `${label(c)}，增益 ${f3(c.gain)}`),
     }
   }
-  return giniPractice(seed + 2)
+  return giniPractice(seed + 2, config)
 }
 
 // ---------------------------------------------------------------- step 3
@@ -178,11 +252,17 @@ function firstCut(seed) {
 
 // ---------------------------------------------------------------- step 4
 
-/** Either the structural leaf bound, or reading train vs validation for two depths. */
-function depthPractice(seed) {
+/**
+ * Either the structural leaf bound, or reading train vs validation for two
+ * depths ('bound' | 'table'). In the table variant the deeper tree sometimes
+ * generalises better and sometimes worse, so "deeper is worse" cannot pass it
+ * any more than "deeper is better" can.
+ */
+function depthPractice(seed, config = {}) {
   const rnd = makeRng(seed)
+  const variant = config.variant ?? (seed % 2 === 0 ? 'bound' : 'table')
 
-  if (seed % 2 === 0) {
+  if (variant === 'bound') {
     const d = intIn(rnd, 3, 10)
     const right = 2 ** d
     const wrong = distinctValues(right, shuffle([2 * d, 2 ** (d - 1), 2 ** (d + 1), d * d, d + 1], rnd), String)
@@ -230,7 +310,7 @@ function depthPractice(seed) {
       facts: [`depth ${a}：训练误差 ${pct(trA)}，验证误差 ${pct(vaA)}`, `depth ${b}：训练误差 ${pct(trB)}，验证误差 ${pct(vaB)}`],
     }
   }
-  return depthPractice(seed + 2)
+  return depthPractice(seed + 2, config)
 }
 
 // ---------------------------------------------------------------- step 5
@@ -309,6 +389,7 @@ function pickSetting(seed) {
 
 export const fruitPractice = {
   'leaf-route': leafRoute,
+  'route-new-tree': routeNewTree,
   'gini-value': giniPractice,
   'first-cut': firstCut,
   'depth-read': depthPractice,

@@ -5,7 +5,8 @@
 #   ./start.sh          开发模式：Vite :5173 + API :8787，改代码自动重载
 #   ./start.sh prod     生产模式：先构建，再由单个进程托管（:8787）
 #   ./start.sh test     跑单元测试
-#   ./start.sh e2e      在真浏览器里把整门课走两遍（需要 API key，约 15 分钟）
+#   ./start.sh e2e      真浏览器验收：整门课走两遍 + AC-01~14 逐条（默认用离线 AI 替身，约 5 分钟）
+#                       E2E_REAL_LLM=1 ./start.sh e2e 改用真实模型（需要 API key）
 #   ./start.sh stop     停掉本项目开着的全部进程（不限于本脚本启动的）
 #
 # 端口被占时会自动顺延（5173 → 5174 → …），实际用的端口以启动时打印的为准。
@@ -152,6 +153,11 @@ if [ ! -d node_modules ]; then
   ok "依赖安装完成"
 fi
 
+if [ ! -f public/pyodide/v0.27.7/VENDORED.json ]; then
+  warn "结课项目的 Python 运行环境还没存到本地，会从 CDN 下载（约 40 MB，网络慢时要几分钟）。"
+  warn "  试点前建议先跑一次：npm run pyodide"
+fi
+
 if [ -z "${MINIMAX_API_KEY:-}" ]; then
   warn "未设置 MINIMAX_API_KEY —— 网站照常可用，但 AI 批改、提示、问答会返回 502。"
   warn "  设置方法：export MINIMAX_API_KEY=...   或写进项目根目录的 .env"
@@ -167,7 +173,9 @@ fi
 # ---------------------------------------------------------------- e2e
 # 自己构建、自己找空闲端口起服务，跑完自己关，不碰开着的开发实例。
 if [ "$MODE" = "e2e" ]; then
-  [ -n "${MINIMAX_API_KEY:-}" ] || die "e2e 要和真实的 AI 老师对话，需要 MINIMAX_API_KEY。"
+  if [ "${E2E_REAL_LLM:-}" = "1" ]; then
+    [ -n "${MINIMAX_API_KEY:-}" ] || die "E2E_REAL_LLM=1 要和真实的 AI 老师对话，需要 MINIMAX_API_KEY。"
+  fi
   exec npm run e2e
 fi
 

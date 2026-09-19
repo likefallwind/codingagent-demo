@@ -68,11 +68,12 @@ function idGain(seed) {
   }
 }
 
-/** Split info of equal branches, or which of two features gain ratio prefers. */
-function gainRatioPractice(seed) {
+/** Split info of equal branches, or which of two features gain ratio prefers ('value' | 'compare'). */
+function gainRatioPractice(seed, config = {}) {
   const rnd = makeRng(seed)
+  const variant = config.variant ?? (seed % 2 === 0 ? 'value' : 'compare')
 
-  if (seed % 2 === 0) {
+  if (variant === 'value') {
     const m = intIn(rnd, 2, 8)
     const per = intIn(rnd, 2, 5)
     const n = m * per
@@ -106,7 +107,7 @@ function gainRatioPractice(seed) {
       facts: [`A 的增益率 ${f3(grA)}`, `B 的增益率 ${f3(grB)}`],
     }
   }
-  return gainRatioPractice(seed + 2)
+  return gainRatioPractice(seed + 2, config)
 }
 
 export const tennisPractice = {

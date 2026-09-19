@@ -76,6 +76,22 @@ export function layoutTree(tree, width, height, opts = {}) {
   return { edges, internals, leaves, compact, nLeaf, depth: dMax }
 }
 
+/**
+ * Clickable leaves are reachable by keyboard too. The label says only what the
+ * leaf shows — its size and its prediction — never whether it is the answer.
+ */
+function keyboard(onNodeClick, n, label) {
+  if (!onNodeClick) return {}
+  return {
+    role: 'button',
+    tabIndex: 0,
+    'aria-label': label,
+    onKeyDown: (e) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onNodeClick(n.node, n.key) }
+    },
+  }
+}
+
 export default function TreeView({
   tree, width = 900, height = 300, compact, pad, onNodeClick, highlightPath, className,
 }) {
@@ -87,8 +103,8 @@ export default function TreeView({
       viewBox={`0 0 ${width} ${height}`}
       className={className}
       style={{ width: '100%', height: 'auto', display: 'block', overflow: 'visible' }}
-      role="img"
-      aria-label={`决策树，深度 ${L.depth}，${L.nLeaf} 个叶子`}
+      role={onNodeClick ? 'group' : 'img'}
+      aria-label={`决策树，深度 ${L.depth}，${L.nLeaf} 个叶子${onNodeClick ? '。叶子可以用 Tab 选中、回车点选' : ''}`}
     >
       {L.edges.map((e) => (
         <path key={e.key} d={e.d} stroke={hi.has(e.key) ? 'var(--brand)' : '#c6d6f2'}
@@ -110,9 +126,16 @@ export default function TreeView({
 
       {L.leaves.map((n) => (
         <g key={n.key} data-node={n.key} data-leaf="1" onClick={onNodeClick ? () => onNodeClick(n.node, n.key) : undefined}
+           {...keyboard(onNodeClick, n, `叶子：${n.node.n} 个样本，判为${n.node.cls === APPLE ? '苹果' : '橙子'}`)}
            style={{ cursor: onNodeClick ? 'pointer' : 'default' }}>
           <circle cx={n.cx} cy={n.cy} r={n.r} fill={n.fill}
                   stroke={hi.has(n.key) ? 'var(--brand)' : 'none'} strokeWidth={hi.has(n.key) ? 2.5 : 0} />
+          {/* The prediction as a character too, not only as a colour. */}
+          {n.label ? (
+            <text x={n.cx} y={n.cy + 3.6} fontSize={10} textAnchor="middle" fill="#fff" fontWeight={700} aria-hidden="true">
+              {n.node.cls === APPLE ? '苹' : '橙'}
+            </text>
+          ) : null}
           {n.label ? (
             <text x={n.cx} y={n.ty} fontSize={n.fs} textAnchor="middle" fill="var(--muted)">{n.label}</text>
           ) : null}
