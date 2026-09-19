@@ -11,11 +11,11 @@
  * keeps free movement between unlocked concepts.
  */
 
-import React, { useCallback, useMemo, useState } from 'react'
+import React, { useCallback, useMemo, useRef, useState } from 'react'
 import { courseList } from './courses/index.js'
 import { useLearner } from './engine/useLearner.js'
 import { getLab } from './labs/registry.js'
-import { LAYERS } from './engine/policy.js'
+import { LAYERS, reviewCheck } from './engine/policy.js'
 import { MASTERY_THRESHOLD } from './engine/learnerModel.js'
 import Header from './components/Header.jsx'
 import ConceptNav from './components/ConceptNav.jsx'
@@ -53,6 +53,7 @@ export default function App() {
   // a check for review it has the same id, and without a fresh key the card
   // would come back still showing the previous answer.
   const [checkRound, setCheckRound] = useState(0)
+  const checkRef = useRef(null)
 
   const concept = course.concepts.find((c) => c.id === L.learner.currentConceptId) ?? course.concepts[0]
   const modelReady = L.learner.courseId === course.id
@@ -88,7 +89,11 @@ export default function App() {
       conceptId: concept.id,
       kind: obs.kind,
       correct: obs.correct,
-      misconceptionId: obs.misconceptionId,
+      // Labs are shared between concepts and may name a misconception that only
+      // a later concept catalogues; recording it here would stall this one.
+      misconceptionId: (concept.misconceptions ?? []).some((m) => m.id === obs.misconceptionId)
+        ? obs.misconceptionId
+        : null,
       detail: obs.detail,
     })
     if (!obs.correct && obs.facts?.length) {
@@ -124,10 +129,14 @@ export default function App() {
 
   // Which check to put in front of the learner: the pinned one while an answer
   // is on screen, otherwise whichever the policy names, otherwise the first
-  // unanswered one.
+  // unanswered one, otherwise — while the concept is not yet mastered — one to
+  // review. That last case matters when the policy is busy remediating or
+  // re-explaining after every check has been passed: without it the page shows
+  // no question at all and the learner has nothing to click.
   const activeCheck = (pinnedCheckId && (concept.checks ?? []).find((c) => c.id === pinnedCheckId))
-    || (action.type === 'check' ? action.check : null)
+    || (action.type === 'check' && action.conceptId === concept.id ? action.check : null)
     || (concept.checks ?? []).find((c) => !(state.evidence ?? []).some((e) => e.correct && e.detail?.checkId === c.id))
+    || (status !== 'mastered' ? reviewCheck(L.learner, concept) : null)
 
   // One render can elapse between selecting a course and its model loading.
   // Every hook above has already run, so returning here is safe.
@@ -195,7 +204,15 @@ export default function App() {
                 : action.why}
             </span>
             <div style={{ flex: 1 }} />
-            <span style={{ fontSize: 11.5, color: 'var(--muted-light)' }}>
+            {/* The question sits below the explanation and the lab, often off
+                screen. Point at it rather than leaving the learner to scroll. */}
+            {activeCheck && status !== 'mastered' && (
+              <Button variant="primary" style={{ height: 30, fontSize: 12.5, flex: 'none' }}
+                onClick={() => checkRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })}>
+                去做题 ↓
+              </Button>
+            )}
+            <span style={{ fontSize: 11.5, color: 'var(--muted-light)', flex: 'none' }}>
               掌握度达到 {Math.round(MASTERY_THRESHOLD * 100)}% 解锁下一步
             </span>
           </div>
@@ -245,17 +262,19 @@ export default function App() {
           )}
 
           {activeCheck && (
-            <CheckCard
-              key={`${concept.id}:${activeCheck.id}:${checkRound}`}
-              course={course}
-              concept={concept}
-              check={activeCheck}
-              learnerState={learnerState}
-              misconceptionHistory={misconceptionHistory}
-              onEvidence={handleEvidence}
-              onAnswered={() => setPinnedCheckId(activeCheck.id)}
-              onWrong={handleWrongAnswer}
-              onContinue={() => { setPinnedCheckId(null); setCheckRound((r) => r + 1) }} />
+            <div ref={checkRef}>
+              <CheckCard
+                key={`${concept.id}:${activeCheck.id}:${checkRound}`}
+                course={course}
+                concept={concept}
+                check={activeCheck}
+                learnerState={learnerState}
+                misconceptionHistory={misconceptionHistory}
+                onEvidence={handleEvidence}
+                onAnswered={() => setPinnedCheckId(activeCheck.id)}
+                onWrong={handleWrongAnswer}
+                onContinue={() => { setPinnedCheckId(null); setCheckRound((r) => r + 1) }} />
+            </div>
           )}
 
           {status === 'mastered' && (

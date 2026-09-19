@@ -189,6 +189,16 @@ test('once every check has a clean pass, review rotates to the least recent', ()
   assert.equal(reviewCheck(l, bread.concepts[0]).id, 'g2')
 })
 
+test('a misconception from another concept\'s catalogue does not stall this one', () => {
+  // The ID3 lab is shared by three concepts and tags a wrong prediction with a
+  // misconception only the third one defines. Remediating it in the first shows
+  // no correction and no question, so the learner has nothing to do.
+  let l = markExplained(initLearner(bread), 'gluten')
+  l = recordEvidence(l, { conceptId: 'gluten', kind: 'labAction', correct: true })
+  l = recordEvidence(l, { conceptId: 'gluten', kind: 'labAction', correct: false, misconceptionId: 'from_a_later_concept' })
+  assert.notEqual(nextAction(l, bread).type, 'remediate')
+})
+
 test('mastering a concept advances to the next, then completes the course', () => {
   let l = initLearner(bread)
   l = { ...l, concepts: { ...l.concepts, gluten: { ...l.concepts.gluten, mastery: 0.95, seenExplain: true } } }

@@ -103,13 +103,17 @@ export function nextAction(learner, course) {
 
   // An unresolved misconception outranks everything else: continuing to drill on
   // top of a wrong belief just practises the wrong thing.
+  // Only misconceptions this concept catalogues count: a lab shared across
+  // concepts can tag one that belongs to a later step, and remediating it here
+  // would show no correction and offer no way forward.
   const active = activeMisconceptions(learner, concept.id)
+    .filter((m) => (concept.misconceptions ?? []).some((x) => x.id === m.id))
   if (active.length > 0) {
     const m = active[0]
-    const detail = (concept.misconceptions ?? []).find((x) => x.id === m.id)
+    const detail = concept.misconceptions.find((x) => x.id === m.id)
     return {
       type: 'remediate', conceptId: concept.id, misconceptionId: m.id, misconception: detail,
-      why: detail ? `你的回答显示出一个具体的误解，先把它纠正过来。` : '先处理一个待澄清的理解偏差。',
+      why: '你的回答显示出一个具体的误解，先把它纠正过来。',
     }
   }
 
