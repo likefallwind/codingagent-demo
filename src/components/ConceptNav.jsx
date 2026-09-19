@@ -16,6 +16,10 @@ const TONE = {
   locked: { dot: '#fff', ring: 'var(--border)', fg: 'var(--muted-light)', label: '未解锁' },
 }
 
+// 临时：未解锁的概念也能点进去看，方便浏览整门课。状态点和「先掌握…」提示照旧，
+// 只是不再拦点击。改回 false 就恢复按前置概念解锁。
+const FREE_NAV = true
+
 export default function ConceptNav({ course, learner, statusOf, currentId, onSelect }) {
   return (
     <aside style={{
@@ -31,6 +35,7 @@ export default function ConceptNav({ course, learner, statusOf, currentId, onSel
           const active = c.id === currentId
           const mastery = learner.concepts[c.id]?.mastery ?? 0
           const locked = status === 'locked'
+          const blocked = locked && !FREE_NAV
           const needs = (c.prerequisites ?? []).map((p) => course.concepts.find((x) => x.id === p)?.shortTitle ?? p)
           // A chapter heading wherever the chapter changes, so the advanced
           // section reads as a branch rather than steps 8-10 of the main line.
@@ -40,13 +45,13 @@ export default function ConceptNav({ course, learner, statusOf, currentId, onSel
             {heading && (
               <div style={{ fontSize: 11.5, color: 'var(--muted-light)', padding: i ? '12px 6px 4px' : '0 6px 4px' }}>{heading}</div>
             )}
-            <button data-concept={c.id} data-status={status} onClick={() => !locked && onSelect(c.id)} disabled={locked}
+            <button data-concept={c.id} data-status={status} onClick={() => !blocked && onSelect(c.id)} disabled={blocked}
               title={locked ? `需要先掌握：${needs.join('、')}` : undefined}
               style={{
                 display: 'flex', alignItems: 'flex-start', gap: 9, padding: '9px 10px',
                 borderRadius: 9, border: 'none', textAlign: 'left',
                 background: active ? 'var(--brand-tint)' : 'transparent',
-                cursor: locked ? 'not-allowed' : 'pointer',
+                cursor: blocked ? 'not-allowed' : 'pointer',
               }}>
               <span style={{
                 width: 15, height: 15, flex: 'none', marginTop: 2, borderRadius: '50%',
