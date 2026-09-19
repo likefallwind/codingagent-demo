@@ -13,22 +13,58 @@
 
 ## 运行
 
+需要 **Node 18 或更高版本**。首次运行会自动安装依赖，不用先跑 `npm install`。
+
+```bash
+git clone git@github.com:likefallwind/codingagent-demo.git
+cd codingagent-demo
+cp .env.example .env              # 填入 MINIMAX_API_KEY
+./start.sh
+```
+
+然后打开 **http://localhost:5173**。`Ctrl+C` 停止。
+
+### 四种模式
+
+| 命令 | 作用 |
+|---|---|
+| `./start.sh` | 开发模式。Vite :5173 + API :8787，改代码自动重载。**日常用这个。** |
+| `./start.sh prod` | 生产模式。先构建，再由单个进程在 :8787 托管前后端。 |
+| `./start.sh test` | 跑 61 个单元测试。 |
+| `./start.sh stop` | 停掉残留进程（比如上次 Ctrl+C 没清干净）。 |
+
+### API key
+
+AI 批改、提示、问答需要 Minimax 的 key。两种设法，二选一：
+
+```bash
+# 写进 .env（推荐，已被 .gitignore 忽略）
+echo 'MINIMAX_API_KEY=你的key' > .env
+
+# 或临时导出（优先级高于 .env）
+export MINIMAX_API_KEY=你的key
+```
+
+**不设也能跑。** 网站、六步实验、所有数学计算和对错判定都在本地完成，完全正常；
+只有 AI 那三类功能会返回 502，界面上会明确提示而不是静默失败。
+
+### 换端口
+
+```bash
+WEB_PORT=3000 PORT=3001 ./start.sh
+```
+
+端口被占时脚本会直接报出占用的进程号并退出，不会静默失败。
+
+### 不用脚本
+
+脚本只是包了一层，底下就是普通的 npm 命令：
+
 ```bash
 npm install
-export MINIMAX_API_KEY=...        # 不设也能跑，AI 功能返回 502，其余正常
 npm run dev                       # Vite :5173 + API :8787
-```
-
-单进程部署：
-
-```bash
-npm run build && npm run server   # http://localhost:8787
-```
-
-测试：
-
-```bash
-npm test                          # 61 个单元测试
+npm run build && npm run server   # 单进程 :8787
+npm test
 ```
 
 ## 架构
@@ -49,6 +85,9 @@ src/labs/            唯一与学科相关的代码
   fruitTree/         CART 算法 + 数据集 + 6 个实验组件
   decisionTree/      ID3 算法 + 数据集
   playTennis/        ID3 实验组件
+
+start.sh             启动脚本（dev / prod / test / stop）
+.env.example         环境变量模板
 
 server/
   minimax.js         Minimax 适配器
