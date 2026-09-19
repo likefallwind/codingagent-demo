@@ -1,0 +1,127 @@
+/*
+ * Design tokens, lifted from the Claude Design source so the built app and the
+ * mockup stay the same product rather than drifting apart.
+ */
+:root {
+  --bg: #f4f7fc;
+  --panel: #ffffff;
+  --border: #e6ebf4;
+  --border-soft: #eaeef6;
+  --border-faint: #eff2f8;
+
+  --ink: #1c2536;
+  --ink-strong: #16233d;
+  --ink-mid: #3c4b66;
+  --ink-soft: #4e5a6e;
+  --muted: #8a94a6;
+  --muted-light: #a6b0c3;
+  --muted-faint: #b6c0d1;
+
+  --brand: #2f63e8;
+  --brand-dark: #1b47b8;
+  --brand-tint: #edf3ff;
+  --brand-tint-2: #e7efff;
+  --brand-tint-3: #dde8fe;
+  --brand-line: #c9d9f7;
+  --brand-line-soft: #dce5f3;
+
+  --apple: #e8543f;
+  --orange: #f0921f;
+  --apple-deep: #c0392b;
+  --orange-deep: #b4780f;
+
+  --ok: #3e9e6e;
+  --ok-deep: #2e7a55;
+  --ok-bg: #eaf7f0;
+  --ok-line: #bfe3d0;
+
+  --warn: #d99b1f;
+  --warn-bg: #fff9ec;
+  --warn-line: #f5e3be;
+
+  --bad: #b4362a;
+  --bad-bg: #fdeae7;
+  --bad-line: #f3b9b0;
+
+  --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+* { box-sizing: border-box; }
+
+html, body, #root {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: "Noto Sans SC", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+button { font-family: inherit; cursor: pointer; }
+input, textarea { font-family: inherit; }
+::placeholder { color: var(--muted-light); }
+
+/* Range inputs carry the lesson's parameters; style them to match the mockup. */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--brand-line-soft);
+  outline: none;
+  width: 100%;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  background: var(--brand);
+  border: 2px solid #fff;
+  box-shadow: 0 1px 4px rgba(23, 43, 77, 0.25);
+  cursor: pointer;
+}
+input[type="range"]::-moz-range-thumb {
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: var(--brand);
+  border: 2px solid #fff;
+  cursor: pointer;
+}
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 13px;
+}
+
+.mono { font-family: var(--mono); }
+
+/* The tutor's answer streams in; a caret makes the wait legible. */
+.streaming::after {
+  content: "";
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  margin-left: 2px;
+  background: var(--brand);
+  vertical-align: -0.15em;
+  animation: blink 1s steps(2, start) infinite;
+}
+@keyframes blink { to { visibility: hidden; } }
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+.fade-up { animation: fadeUp 0.22s ease-out; }
+
+@media (prefers-reduced-motion: reduce) {
+  .fade-up, .streaming::after { animation: none; }
+}
+
+.scroll-y { overflow-y: auto; scrollbar-width: thin; }
+.scroll-y::-webkit-scrollbar { width: 8px; }
+.scroll-y::-webkit-scrollbar-thumb { background: #dfe6f2; border-radius: 4px; }

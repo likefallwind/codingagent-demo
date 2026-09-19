@@ -1,0 +1,1354 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  html, body { margin:0; padding:0; background:#F4F7FC; font-family:"Noto Sans SC","PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif; -webkit-font-smoothing:antialiased; }
+  * { box-sizing:border-box; }
+  a { color:#2F63E8; text-decoration:none; }
+  a:hover { color:#1B47B8; }
+  ::placeholder { color:#A6B0C3; }
+  input[type=range] { -webkit-appearance:none; appearance:none; height:4px; border-radius:2px; background:#DCE5F3; outline:none; }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:17px; height:17px; border-radius:50%; background:#2F63E8; border:2px solid #fff; box-shadow:0 1px 4px rgba(23,43,77,.25); cursor:pointer; }
+</style>
+</helmet>
+
+<div style="min-width:1460px; min-height:100vh; display:flex; flex-direction:column; background:#F4F7FC; color:#1C2536;">
+
+  <header style="height:52px; flex:none; display:flex; align-items:center; gap:18px; padding:0 22px; background:#FFFFFF; border-bottom:1px solid #E6EBF4;">
+    <div style="display:flex; align-items:center; gap:9px;">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="11" fill="#EAF1FF"></circle><path d="M8 15.5 15.5 7.5 13.6 13.2h3L9.2 20l2-6.3H8Z" fill="#2F63E8"></path></svg>
+      <span style="font-size:17px; font-weight:700; letter-spacing:-0.2px;">LearnAI</span>
+      <span style="font-size:11px; font-weight:500; color:#2F63E8; background:#E7EFFF; border-radius:5px; padding:2px 6px;">Beta</span>
+    </div>
+    <div style="width:1px; height:22px; background:#E6EBF4;"></div>
+    <div style="font-size:13px; color:#8A94A6;">用 AI，深入理解每一个问题</div>
+    <div style="flex:1;"></div>
+    <div style="display:flex; align-items:center; gap:18px;">
+      <button style="display:flex; align-items:center; gap:6px; background:none; border:none; padding:0; cursor:pointer; font-size:13px; color:#5B677C; font-family:inherit;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#5B677C" stroke-width="2"><circle cx="11" cy="11" r="7"></circle><path d="M16.5 16.5 21 21"></path></svg>
+        搜索
+      </button>
+      <button style="background:none; border:none; padding:0; cursor:pointer; display:flex;">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#8A94A6" stroke-width="2"><circle cx="12" cy="12" r="4.2"></circle><path d="M12 3v2.2M12 18.8V21M3 12h2.2M18.8 12H21M5.6 5.6l1.6 1.6M16.8 16.8l1.6 1.6M18.4 5.6l-1.6 1.6M7.2 16.8l-1.6 1.6"></path></svg>
+      </button>
+      <div style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+        <div style="width:27px; height:27px; border-radius:50%; background:#2F63E8; color:#fff; font-size:12px; font-weight:600; display:flex; align-items:center; justify-content:center;">S</div>
+        <span style="font-size:13px; color:#3C475C;">学习中</span>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#8A94A6" stroke-width="2.4"><path d="M6 9l6 6 6-6"></path></svg>
+      </div>
+    </div>
+  </header>
+
+  <div style="flex:1; display:flex; align-items:stretch; min-height:0;">
+
+    <aside style="width:236px; flex:none; background:#FFFFFF; border-right:1px solid #E6EBF4; padding:14px 14px 0; display:flex; flex-direction:column;">
+      <nav style="display:flex; flex-direction:column; gap:2px;">
+        <div style="display:flex; align-items:center; gap:11px; height:40px; padding:0 12px; border-radius:9px; background:#EDF3FF; color:#2F63E8; font-size:14px; font-weight:500; cursor:pointer; box-shadow:inset 2px 0 0 #2F63E8;">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 11l8-6.5 8 6.5v8a1 1 0 0 1-1 1h-4v-6h-6v6H5a1 1 0 0 1-1-1v-8Z"></path></svg>
+          学习工作台
+        </div>
+        <div style="display:flex; align-items:center; gap:11px; height:40px; padding:0 12px; border-radius:9px; color:#4E5A6E; font-size:14px; cursor:pointer;" style-hover="background:#F4F7FC">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 3h8M9 3v5.5L5 19a2 2 0 0 0 1.9 2.6h10.2A2 2 0 0 0 19 19l-4-10.5V3"></path></svg>
+          我的实验
+        </div>
+        <div style="display:flex; align-items:center; gap:11px; height:40px; padding:0 12px; border-radius:9px; color:#4E5A6E; font-size:14px; cursor:pointer;" style-hover="background:#F4F7FC">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="4" width="16" height="16" rx="2"></rect><path d="M4 9h16M10 9v11"></path></svg>
+          知识库
+        </div>
+        <div style="display:flex; align-items:center; gap:11px; height:40px; padding:0 12px; border-radius:9px; color:#4E5A6E; font-size:14px; cursor:pointer;" style-hover="background:#F4F7FC">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 20l3.5-1 11-11a2.1 2.1 0 0 0-3-3l-11 11L4 20Z"></path></svg>
+          灵感笔记
+        </div>
+        <div style="display:flex; align-items:center; gap:11px; height:40px; padding:0 12px; border-radius:9px; color:#4E5A6E; font-size:14px; cursor:pointer;" style-hover="background:#F4F7FC">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 20V12M10 20V5M15 20v-6M20 20V9"></path></svg>
+          学习统计
+        </div>
+      </nav>
+
+      <div style="height:1px; background:#EAEEF6; margin:16px 2px;"></div>
+
+      <div style="display:flex; align-items:center; gap:7px; font-size:12.5px; color:#8A94A6; padding:0 4px; margin-bottom:9px;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8"></circle><circle cx="12" cy="12" r="2.6"></circle></svg>
+        当前主题
+      </div>
+      <div style="background:#EDF3FF; border:1px solid #D9E5FF; border-radius:10px; padding:12px 13px;">
+        <div style="font-size:14px; font-weight:700; color:#22365C; margin-bottom:5px;">决策树：从分裂到剪枝</div>
+        <div style="font-size:12px; line-height:1.6; color:#6C7A93;">用 16 个水果样本，走完一棵树的一生</div>
+        <div style="height:5px; border-radius:3px; background:#D5E2FA; margin-top:11px; overflow:hidden;">
+          <div style="height:100%; border-radius:3px; background:#2F63E8; width:{{ progress }};"></div>
+        </div>
+        <div style="font-size:11.5px; color:#7089B8; margin-top:7px;">已学 {{ step }} / 6 步</div>
+      </div>
+
+      <div style="display:flex; align-items:center; gap:7px; font-size:12.5px; color:#8A94A6; padding:0 4px; margin:20px 0 6px;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H11v16H5.5A1.5 1.5 0 0 1 4 18.5v-13ZM20 5.5A1.5 1.5 0 0 0 18.5 4H13v16h5.5A1.5 1.5 0 0 0 20 18.5v-13Z"></path></svg>
+        相关概念
+      </div>
+      <div style="display:flex; flex-direction:column;">
+        <div style="display:flex; align-items:center; gap:9px; height:34px; padding:0 8px; border-radius:8px; font-size:13.5px; color:#4E5A6E; cursor:pointer;" style-hover="background:#F4F7FC">
+          <svg width="9" height="9" viewBox="0 0 10 10" fill="#B6C0D1"><path d="M2 1l6 4-6 4z"></path></svg> 基尼不纯度
+        </div>
+        <div style="display:flex; align-items:center; gap:9px; height:34px; padding:0 8px; border-radius:8px; font-size:13.5px; color:#4E5A6E; cursor:pointer;" style-hover="background:#F4F7FC">
+          <svg width="9" height="9" viewBox="0 0 10 10" fill="#B6C0D1"><path d="M2 1l6 4-6 4z"></path></svg> 模型复杂度
+        </div>
+        <div style="display:flex; align-items:center; gap:9px; height:34px; padding:0 8px; border-radius:8px; font-size:13.5px; color:#4E5A6E; cursor:pointer;" style-hover="background:#F4F7FC">
+          <svg width="9" height="9" viewBox="0 0 10 10" fill="#B6C0D1"><path d="M2 1l6 4-6 4z"></path></svg> 泛化
+        </div>
+        <div style="display:flex; align-items:center; gap:9px; height:34px; padding:0 8px; border-radius:8px; font-size:13.5px; color:#4E5A6E; cursor:pointer;" style-hover="background:#F4F7FC">
+          <svg width="9" height="9" viewBox="0 0 10 10" fill="#B6C0D1"><path d="M2 1l6 4-6 4z"></path></svg> 剪枝
+        </div>
+      </div>
+
+      <div style="display:flex; align-items:center; gap:7px; font-size:12.5px; color:#8A94A6; padding:0 4px; margin:20px 0 6px;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8"></circle><path d="M12 8v4.4l3 1.8"></path></svg>
+        最近工作
+      </div>
+      <div style="display:flex; flex-direction:column; gap:2px;">
+        <div style="display:flex; align-items:center; gap:9px; height:34px; padding:0 9px; border-radius:8px; background:#EDF3FF; font-size:13.5px; color:#2F4670; cursor:pointer;">
+          <svg width="9" height="9" viewBox="0 0 10 10" fill="#8FAAE6"><path d="M2 1l6 4-6 4z"></path></svg>
+          水果分类实验
+          <span style="flex:1;"></span>
+          <span style="font-size:11.5px; color:#8FA0BE;">刚刚</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:9px; height:34px; padding:0 9px; border-radius:8px; font-size:13.5px; color:#4E5A6E; cursor:pointer;" style-hover="background:#F4F7FC">
+          <svg width="9" height="9" viewBox="0 0 10 10" fill="#B6C0D1"><path d="M2 1l6 4-6 4z"></path></svg>
+          分裂标准对比
+          <span style="flex:1;"></span>
+          <span style="font-size:11.5px; color:#A6B0C3;">2 小时前</span>
+        </div>
+      </div>
+
+      <div style="flex:1; min-height:24px;"></div>
+      <div style="display:flex; align-items:center; gap:9px; padding:16px 4px 18px; border-top:1px solid #EAEEF6;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5EB98A" stroke-width="1.7"><path d="M12 21c0-5 1-8 6-11-6-1-9 1-10.5 4.5C6 18 8 21 12 21Z"></path><path d="M12 21C10 15 8 12 4 10"></path></svg>
+        <div style="font-size:11.5px; line-height:1.55; color:#94A0B4;">更好的学习，<br />源于真实的问题</div>
+      </div>
+    </aside>
+
+    <main style="flex:1; min-width:0; padding:18px 22px 26px; display:flex; flex-direction:column; gap:16px;">
+
+      <div style="background:#fff; border:1px solid #E6EBF4; border-radius:13px; padding:14px 18px; display:flex; align-items:center; gap:0;">
+        <sc-for list="{{ steps }}" as="s" hint-placeholder-count="6">
+          <div onClick="{{ s.go }}" style="flex:1; display:flex; align-items:center; gap:10px; cursor:pointer; min-width:0;">
+            <div style="width:26px; height:26px; flex:none; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12.5px; font-weight:600; background:{{ s.bg }}; color:{{ s.fg }}; border:1.5px solid {{ s.bd }};">{{ s.n }}</div>
+            <div style="font-size:13px; font-weight:{{ s.weight }}; color:{{ s.tone }}; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ s.label }}</div>
+            <div style="flex:1; min-width:8px; height:1.5px; background:{{ s.line }};"></div>
+          </div>
+        </sc-for>
+      </div>
+
+      <div style="display:flex; align-items:flex-start; gap:20px; background:linear-gradient(180deg,#F1F6FF 0%,#EAF1FF 100%); border:1px solid #DCE7FA; border-radius:13px; padding:20px 24px;">
+        <div style="width:46px; height:46px; flex:none; border-radius:12px; background:#2F63E8; display:flex; align-items:center; justify-content:center;">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8"><circle cx="12" cy="12" r="8.2"></circle><circle cx="12" cy="12" r="3.4"></circle><path d="M12 3.8v2M12 18.2v2M3.8 12h2M18.2 12h2"></path></svg>
+        </div>
+        <div style="flex:1; min-width:0;">
+          <sc-if value="{{ isS1 }}" hint-placeholder-val="{{ true }}">
+            <div>
+              <h1 style="margin:0 0 7px; font-size:25px; font-weight:700; letter-spacing:-0.4px; color:#16233D;">决策树就是一串"是/否"问题</h1>
+              <p style="margin:0; font-size:13.5px; line-height:1.7; color:#6C7A93; max-width:760px; text-wrap:pretty;">桌上有 16 个水果，8 个苹果和 8 个橙子。每个水果记录了三件事：重量、有没有果香、果皮厚薄。决策树要做的，是找出几个最能把它们分开的问题，然后按顺序问下去。</p>
+            </div>
+          </sc-if>
+          <sc-if value="{{ isS2 }}">
+            <div>
+              <h1 style="margin:0 0 7px; font-size:25px; font-weight:700; letter-spacing:-0.4px; color:#16233D;">好问题和坏问题，差在"纯度"</h1>
+              <p style="margin:0; font-size:13.5px; line-height:1.7; color:#6C7A93; max-width:760px; text-wrap:pretty;">同样切一刀，有的问题让两边变干净，有的问题两边还是混着。基尼不纯度把"混的程度"变成一个数字，分裂前后的差值就是这一刀的收益。</p>
+            </div>
+          </sc-if>
+          <sc-if value="{{ isS3 }}">
+            <div>
+              <h1 style="margin:0 0 7px; font-size:25px; font-weight:700; letter-spacing:-0.4px; color:#16233D;">亲手建一棵树</h1>
+              <p style="margin:0; font-size:13.5px; line-height:1.7; color:#6C7A93; max-width:760px; text-wrap:pretty;">轮到你选了。在每个节点上挑一个特征切下去，看看树会长成什么样，以及你的选择和算法的选择差多少。</p>
+            </div>
+          </sc-if>
+          <sc-if value="{{ isS4 }}">
+            <div>
+              <h1 style="margin:0 0 7px; font-size:25px; font-weight:700; letter-spacing:-0.4px; color:#16233D;">深度的代价</h1>
+              <p style="margin:0; font-size:13.5px; line-height:1.7; color:#6C7A93; max-width:760px; text-wrap:pretty;">树可以一直分下去，直到每个叶子只剩一个样本。拖动滑块看：深度每加一层，树宽一倍，决策边界也碎一点。</p>
+            </div>
+          </sc-if>
+          <sc-if value="{{ isS5 }}">
+            <div>
+              <h1 style="margin:0 0 7px; font-size:25px; font-weight:700; letter-spacing:-0.4px; color:#16233D;">过拟合到底发生在哪一层？</h1>
+              <p style="margin:0; font-size:13.5px; line-height:1.7; color:#6C7A93; max-width:760px; text-wrap:pretty;">把 300 个水果按 4 : 1 分成训练集和验证集，从 depth = 1 到 depth = 8 各训练一棵树，把两条误差曲线画在一起。</p>
+            </div>
+          </sc-if>
+          <sc-if value="{{ isS6 }}">
+            <div>
+              <h1 style="margin:0 0 7px; font-size:25px; font-weight:700; letter-spacing:-0.4px; color:#16233D;">剪枝：把树修回合适的大小</h1>
+              <p style="margin:0; font-size:13.5px; line-height:1.7; color:#6C7A93; max-width:760px; text-wrap:pretty;">两种做法：长之前就限制（预剪枝，max_depth、min_samples_leaf），或者长完再剪掉没有收益的分支（后剪枝）。下面两个旋钮就是预剪枝。</p>
+            </div>
+          </sc-if>
+        </div>
+        <button style="flex:none; display:flex; align-items:center; gap:6px; height:34px; padding:0 13px; border-radius:9px; border:1px solid #C9D9F7; background:#fff; color:#2F63E8; font-size:13px; font-weight:500; font-family:inherit; cursor:pointer; white-space:nowrap;" style-hover="background:#F6FAFF">
+          研究模式
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 9l6 6 6-6"></path></svg>
+        </button>
+      </div>
+
+      <div style="display:flex; gap:20px; align-items:flex-start;">
+        <section style="flex:1; min-width:460px; background:#fff; border:1px solid #E6EBF4; border-radius:13px; padding:18px 18px 16px; box-shadow:0 1px 2px rgba(23,43,77,.04);">
+          <div style="display:flex; align-items:center; gap:13px; margin-bottom:16px;">
+            <div style="width:38px; height:38px; flex:none; border-radius:10px; background:#2F63E8; display:flex; align-items:center; justify-content:center;">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.7"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3Z"></path><path d="M4 7.5l8 4.5 8-4.5M12 12v9"></path></svg>
+            </div>
+            <div style="flex:1; min-width:0;">
+              <div style="font-size:17px; font-weight:700; color:#16233D;">主工作面</div>
+              <div style="font-size:12.5px; color:#8A94A6; margin-top:3px;">{{ workTitle }}</div>
+            </div>
+            <div style="display:flex; gap:9px; flex:none;">
+              <button onClick="{{ toggleCode }}" style="display:flex; align-items:center; gap:6px; height:34px; padding:0 12px; border-radius:9px; border:1px solid #E1E7F1; background:{{ codeBg }}; color:#4E5A6E; font-size:13px; font-family:inherit; cursor:pointer;" style-hover="background:#F4F7FC">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#7A8799" stroke-width="1.9"><path d="M9 7.5 4.5 12 9 16.5M15 7.5 19.5 12 15 16.5"></path></svg>
+                <span style="white-space:nowrap;">查看代码</span>
+              </button>
+              <button style="display:flex; align-items:center; gap:6px; height:34px; padding:0 12px; border-radius:9px; border:1px solid #E1E7F1; background:#fff; color:#4E5A6E; font-size:13px; font-family:inherit; cursor:pointer;" style-hover="background:#F4F7FC">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#7A8799" stroke-width="1.9"><path d="M12 4v10M7.5 10.5 12 15l4.5-4.5M5 19h14"></path></svg>
+                <span style="white-space:nowrap;">下载</span>
+              </button>
+              <button style="display:flex; align-items:center; gap:6px; height:34px; padding:0 12px; border-radius:9px; border:1px solid #E1E7F1; background:#fff; color:#4E5A6E; font-size:13px; font-family:inherit; cursor:pointer;" style-hover="background:#F4F7FC">
+                <span style="letter-spacing:1px; color:#7A8799;">···</span>
+                <span style="white-space:nowrap;">更多</span>
+              </button>
+            </div>
+          </div>
+
+          <sc-if value="{{ showCode }}">
+            <div style="background:#1B2438; border-radius:11px; padding:16px 18px; margin-bottom:14px; font-family:'JetBrains Mono',ui-monospace,monospace; font-size:12.5px; line-height:1.9; color:#C8D3E8; overflow-x:auto;">
+              <div><span style="color:#7C8BA8;"># 16 个水果样本，两个类别：苹果 / 橙子</span></div>
+              <div><span style="color:#C792EA;">from</span> sklearn.tree <span style="color:#C792EA;">import</span> DecisionTreeClassifier</div>
+              <div style="height:8px;"></div>
+              <div>X = df[[<span style="color:#9BE6A8;">"weight"</span>, <span style="color:#9BE6A8;">"aroma"</span>, <span style="color:#9BE6A8;">"peel"</span>]]</div>
+              <div>y = df[<span style="color:#9BE6A8;">"label"</span>]</div>
+              <div style="height:8px;"></div>
+              <div>clf = DecisionTreeClassifier(</div>
+              <div>    criterion=<span style="color:#9BE6A8;">"gini"</span>,</div>
+              <div>    max_depth=<span style="color:#F7C86B;">{{ codeDepth }}</span>,</div>
+              <div>    min_samples_leaf=<span style="color:#F7C86B;">{{ codeLeaf }}</span>,</div>
+              <div>    random_state=<span style="color:#F7C86B;">0</span>,</div>
+              <div>)</div>
+              <div>clf.fit(X_train, y_train)</div>
+              <div style="height:8px;"></div>
+              <div><span style="color:#7C8BA8;"># 训练误差 {{ codeTrainErr }} ／ 验证误差 {{ codeValErr }}</span></div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ isS1 }}" hint-placeholder-val="{{ true }}">
+            <div>
+              <div style="border:1px solid #EAEEF6; border-radius:11px; padding:16px 16px 10px;">
+                <div style="display:flex; align-items:baseline; gap:12px; margin:0 4px 4px;">
+                  <div style="font-size:16px; font-weight:700; color:#16233D;">一棵已经建好的树（点节点展开下一层）</div>
+                  <span style="flex:1;"></span>
+                  <button onClick="{{ t1Reset }}" style="border:1px solid #E1E7F1; background:#fff; border-radius:8px; height:28px; padding:0 10px; font-size:12px; color:#5B677C; font-family:inherit; cursor:pointer;" style-hover="background:#F4F7FC">收起重看</button>
+                </div>
+                <svg viewBox="0 0 860 330" style="width:100%; display:block;">
+                  <g stroke="#C6D6F2" stroke-width="1.5" fill="none">
+                    <sc-if value="{{ t1Open1 }}"><path d="M430 72 300 132M430 72 560 132"></path></sc-if>
+                    <sc-if value="{{ t1Open2 }}"><path d="M560 172 470 236M560 172 690 236"></path></sc-if>
+                  </g>
+                  <g font-family="Noto Sans SC, sans-serif">
+                    <g onClick="{{ t1Expand1 }}" style="cursor:pointer;">
+                      <rect x="310" y="26" width="240" height="46" rx="11" fill="#EDF3FF" stroke="#2F63E8" stroke-width="1.6"></rect>
+                      <text x="430" y="55" font-size="15" font-weight="500" fill="#22365C" text-anchor="middle">果皮是薄的吗？</text>
+                      <text x="430" y="17" font-size="12" fill="#8A94A6" text-anchor="middle">16 个样本 · 8 苹果 / 8 橙子</text>
+                    </g>
+                    <sc-if value="{{ t1Open1 }}">
+                      <g>
+                        <text x="352" y="104" font-size="12" fill="#3E9E6E">是</text>
+                        <text x="508" y="104" font-size="12" fill="#C4796F">否</text>
+                        <rect x="210" y="132" width="180" height="58" rx="11" fill="#FBE6E1" stroke="#EFB9AC" stroke-width="1.4"></rect>
+                        <text x="300" y="157" font-size="15" font-weight="700" fill="#A93A26" text-anchor="middle">🍎 判定为苹果</text>
+                        <text x="300" y="177" font-size="12" fill="#9A6353" text-anchor="middle">7 个样本，全部是苹果</text>
+                        <g onClick="{{ t1Expand2 }}" style="cursor:pointer;">
+                          <rect x="440" y="132" width="240" height="46" rx="11" fill="#EDF3FF" stroke="#7FA9EE" stroke-width="1.6"></rect>
+                          <text x="560" y="161" font-size="15" font-weight="500" fill="#22365C" text-anchor="middle">重量 ≤ 180 g 吗？</text>
+                          <text x="560" y="197" font-size="12" fill="#8A94A6" text-anchor="middle">9 个样本 · 1 苹果 / 8 橙子</text>
+                        </g>
+                      </g>
+                    </sc-if>
+                    <sc-if value="{{ t1Open2 }}">
+                      <g>
+                        <text x="496" y="212" font-size="12" fill="#3E9E6E">是</text>
+                        <text x="642" y="212" font-size="12" fill="#C4796F">否</text>
+                        <rect x="380" y="236" width="180" height="58" rx="11" fill="#FDF0DC" stroke="#F0CA8C" stroke-width="1.4"></rect>
+                        <text x="470" y="261" font-size="15" font-weight="700" fill="#9A6608" text-anchor="middle">🍊 判定为橙子</text>
+                        <text x="470" y="281" font-size="12" fill="#95744A" text-anchor="middle">2 个样本，全部是橙子</text>
+                        <rect x="600" y="236" width="180" height="58" rx="11" fill="#FDF0DC" stroke="#F0CA8C" stroke-width="1.4"></rect>
+                        <text x="690" y="261" font-size="15" font-weight="700" fill="#9A6608" text-anchor="middle">🍊 判定为橙子</text>
+                        <text x="690" y="281" font-size="12" fill="#95744A" text-anchor="middle">7 个中 6 个是橙子</text>
+                      </g>
+                    </sc-if>
+                  </g>
+                </svg>
+              </div>
+
+              <div style="display:flex; gap:14px; margin-top:14px; align-items:stretch;">
+                <div style="flex:1; border:1px solid #EAEEF6; border-radius:11px; padding:15px 16px;">
+                  <div style="font-size:14px; font-weight:700; color:#16233D; margin-bottom:11px;">这 16 个样本</div>
+                  <div style="display:grid; grid-template-columns:auto auto auto auto; gap:7px 16px; font-size:12.5px; color:#5B677C;">
+                    <div style="color:#8A94A6;">种类</div><div style="color:#8A94A6;">重量</div><div style="color:#8A94A6;">果香</div><div style="color:#8A94A6;">果皮</div>
+                    <sc-for list="{{ tableRows }}" as="r" hint-placeholder-count="8">
+                      <div style="display:contents;">
+                        <div style="color:{{ r.color }}; font-weight:500;">{{ r.cls }}</div>
+                        <div>{{ r.w }} g</div>
+                        <div>{{ r.aroma }}</div>
+                        <div>{{ r.peel }}</div>
+                      </div>
+                    </sc-for>
+                  </div>
+                  <div style="font-size:12px; color:#A6B0C3; margin-top:10px;">仅显示前 8 条，共 16 条</div>
+                </div>
+                <div style="width:300px; flex:none; display:flex; flex-direction:column; gap:12px;">
+                  <div style="border:1px solid #EAEEF6; border-radius:11px; padding:15px 16px; flex:1;">
+                    <div style="font-size:14px; font-weight:700; color:#16233D; margin-bottom:8px;">读这棵树</div>
+                    <div style="font-size:12.5px; line-height:1.9; color:#5B677C; text-wrap:pretty;">从最上面出发，每个方框问一个问题，沿着"是"或"否"往下走，走到叶子就是预测结果。只有两个问题，就能把 16 个水果分到 15 个正确。</div>
+                  </div>
+                  <div style="background:#FFF9EC; border:1px solid #F5E3BE; border-radius:11px; padding:14px 15px; display:flex; gap:11px;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#D99B1F" stroke-width="1.8" style="flex:none;"><path d="M9 17h6M10 21h4M12 3a6 6 0 0 1 3.6 10.8c-.4.3-.6.8-.6 1.2H9c0-.4-.2-.9-.6-1.2A6 6 0 0 1 12 3Z"></path></svg>
+                    <div style="font-size:12.5px; line-height:1.8; color:#6B5A34;">最右边那个叶子里混着 1 个苹果。下一步我们就来量化"混"这件事。</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ isS2 }}">
+            <div>
+              <div style="display:flex; gap:10px; margin-bottom:13px;">
+                <sc-for list="{{ featChoices }}" as="f" hint-placeholder-count="3">
+                  <button onClick="{{ f.pick }}" style="flex:1; height:42px; border-radius:10px; border:1.5px solid {{ f.bd }}; background:{{ f.bg }}; color:{{ f.fg }}; font-size:13.5px; font-weight:500; font-family:inherit; cursor:pointer;">按{{ f.name }}切一刀</button>
+                </sc-for>
+              </div>
+
+              <div style="border:1px solid #EAEEF6; border-radius:11px; padding:16px;">
+                <div style="display:flex; align-items:center; gap:14px; margin-bottom:6px;">
+                  <div style="font-size:16px; font-weight:700; color:#16233D;">{{ s2Title }}</div>
+                  <span style="flex:1;"></span>
+                  <div style="display:flex; align-items:center; gap:10px;">
+                    <span style="font-size:12.5px; color:#8A94A6;">阈值</span>
+                    <input type="range" min="{{ s2Min }}" max="{{ s2Max }}" step="{{ s2Step }}" value="{{ s2Thr }}" onInput="{{ s2SetThr }}" style="width:200px;" />
+                    <span style="font-size:13px; font-weight:700; color:#2F63E8; min-width:74px;">{{ s2ThrLabel }}</span>
+                  </div>
+                </div>
+                <svg viewBox="0 0 900 330" style="width:100%; display:block;">
+                  <rect x="70" y="30" width="790" height="250" fill="#FBFCFE"></rect>
+                  <g stroke="#EEF2F8" stroke-width="1"><path d="M70 105H860M70 180H860M70 255H860M200 30V280M330 30V280M460 30V280M590 30V280M720 30V280"></path></g>
+                  <path d="M70 30V280H860" stroke="#C9D2E0" stroke-width="1.3" fill="none"></path>
+                  <g font-size="13" fill="#8A94A6" font-family="Noto Sans SC, sans-serif">
+                    <text x="58" y="72" text-anchor="end">厚</text>
+                    <text x="58" y="147" text-anchor="end">中</text>
+                    <text x="58" y="222" text-anchor="end">薄</text>
+                    <text x="70" y="300" text-anchor="middle">100</text>
+                    <text x="200" y="300" text-anchor="middle">140</text>
+                    <text x="330" y="300" text-anchor="middle">180</text>
+                    <text x="460" y="300" text-anchor="middle">220</text>
+                    <text x="590" y="300" text-anchor="middle">260</text>
+                    <text x="465" y="322" text-anchor="middle" fill="#6C7A93">重量 (g)</text>
+                    <text x="24" y="155" text-anchor="middle" fill="#6C7A93" transform="rotate(-90 24 155)">果皮厚度</text>
+                  </g>
+                  <sc-if value="{{ s2IsVertical }}" hint-placeholder-val="{{ true }}">
+                    <g>
+                      <rect x="70" y="30" width="{{ s2LineX }}" height="250" fill="#2F63E8" opacity="0.05"></rect>
+                      <path d="M{{ s2LineXAbs }} 24V286" stroke="#2F63E8" stroke-width="2" stroke-dasharray="7 5"></path>
+                    </g>
+                  </sc-if>
+                  <sc-if value="{{ s2IsHorizontal }}">
+                    <g>
+                      <rect x="70" y="{{ s2LineY }}" width="790" height="{{ s2LineH }}" fill="#2F63E8" opacity="0.05"></rect>
+                      <path d="M64 {{ s2LineY }}H866" stroke="#2F63E8" stroke-width="2" stroke-dasharray="7 5"></path>
+                    </g>
+                  </sc-if>
+                  <sc-for list="{{ s2Points }}" as="p" hint-placeholder-count="0">
+                    <circle cx="{{ p.x }}" cy="{{ p.y }}" r="{{ p.r }}" fill="{{ p.fill }}" stroke="{{ p.stroke }}" stroke-width="2"></circle>
+                  </sc-for>
+                  <g font-family="Noto Sans SC, sans-serif" font-size="12.5">
+                    <circle cx="700" cy="52" r="6" fill="#E8543F"></circle><text x="714" y="57" fill="#5B677C">苹果</text>
+                    <circle cx="770" cy="52" r="6" fill="#F0921F"></circle><text x="784" y="57" fill="#5B677C">橙子</text>
+                    <circle cx="700" cy="76" r="6" fill="#fff" stroke="#9AA6BA" stroke-width="2"></circle><text x="714" y="81" fill="#5B677C">空心 = 无果香</text>
+                  </g>
+                </svg>
+              </div>
+
+              <div style="display:flex; gap:14px; margin-top:14px;">
+                <div style="flex:1; border:1px solid #EAEEF6; border-radius:11px; padding:15px 16px;">
+                  <div style="font-size:14px; font-weight:700; color:#16233D; margin-bottom:12px;">这一刀的账</div>
+                  <div style="display:flex; flex-direction:column; gap:11px;">
+                    <div>
+                      <div style="display:flex; justify-content:space-between; font-size:12.5px; color:#5B677C; margin-bottom:5px;"><span>分裂前 · 基尼不纯度</span><span style="font-weight:700; color:#22365C;">{{ s2GiniBefore }}</span></div>
+                      <div style="height:7px; border-radius:4px; background:#EEF2F8; overflow:hidden;"><div style="height:100%; background:#9AA6BA; width:{{ s2BarBefore }};"></div></div>
+                    </div>
+                    <div>
+                      <div style="display:flex; justify-content:space-between; font-size:12.5px; color:#5B677C; margin-bottom:5px;"><span>左边（满足条件）· {{ s2LeftN }} 个</span><span style="font-weight:700; color:#22365C;">{{ s2GiniLeft }}</span></div>
+                      <div style="height:7px; border-radius:4px; background:#EEF2F8; overflow:hidden;"><div style="height:100%; background:#2F63E8; width:{{ s2BarLeft }};"></div></div>
+                    </div>
+                    <div>
+                      <div style="display:flex; justify-content:space-between; font-size:12.5px; color:#5B677C; margin-bottom:5px;"><span>右边 · {{ s2RightN }} 个</span><span style="font-weight:700; color:#22365C;">{{ s2GiniRight }}</span></div>
+                      <div style="height:7px; border-radius:4px; background:#EEF2F8; overflow:hidden;"><div style="height:100%; background:#7FA9EE; width:{{ s2BarRight }};"></div></div>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:10px; background:#EDF3FF; border-radius:9px; padding:11px 13px; margin-top:2px;">
+                      <span style="font-size:12.5px; color:#3C4B66;">信息增益</span>
+                      <span style="flex:1;"></span>
+                      <span style="font-size:18px; font-weight:700; color:#2F63E8;">{{ s2Gain }}</span>
+                    </div>
+                  </div>
+                  <div style="font-family:'JetBrains Mono',monospace; font-size:11.5px; color:#8A94A6; margin-top:12px; line-height:1.7;">Gini = 1 − p(苹果)² − p(橙子)²</div>
+                </div>
+                <div style="flex:1; border:1px solid #EAEEF6; border-radius:11px; padding:15px 16px;">
+                  <div style="font-size:14px; font-weight:700; color:#16233D; margin-bottom:12px;">三个特征的最好成绩</div>
+                  <div style="display:flex; flex-direction:column; gap:10px;">
+                    <sc-for list="{{ s2Ranking }}" as="r" hint-placeholder-count="3">
+                      <div style="display:flex; align-items:center; gap:11px; border:1px solid {{ r.bd }}; background:{{ r.bg }}; border-radius:9px; padding:11px 13px;">
+                        <div style="font-size:13.5px; font-weight:500; color:#22365C; width:88px; flex:none;">{{ r.name }}</div>
+                        <div style="font-size:12px; color:#8A94A6; flex:1; min-width:0;">{{ r.cond }}</div>
+                        <div style="font-size:15px; font-weight:700; color:{{ r.tone }};">{{ r.gain }}</div>
+                      </div>
+                    </sc-for>
+                  </div>
+                  <div style="font-size:12.5px; line-height:1.85; color:#5B677C; margin-top:13px; text-wrap:pretty;">果皮厚度一刀就把 7 个苹果完全分出去，增益最大；果香几乎所有水果都有，切下去两边还是混的。算法每一步就是这样枚举所有特征和阈值，挑增益最大的那一个。</div>
+                </div>
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ isS3 }}">
+            <div>
+              <div style="border:1px solid #EAEEF6; border-radius:11px; padding:16px;">
+                <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px;">
+                  <div style="font-size:16px; font-weight:700; color:#16233D;">{{ s3Prompt }}</div>
+                  <span style="flex:1;"></span>
+                  <button onClick="{{ s3Reset }}" style="border:1px solid #E1E7F1; background:#fff; border-radius:8px; height:28px; padding:0 10px; font-size:12px; color:#5B677C; font-family:inherit; cursor:pointer;" style-hover="background:#F4F7FC">重新开始</button>
+                </div>
+                <div style="display:flex; gap:10px; margin-bottom:14px;">
+                  <sc-for list="{{ s3Choices }}" as="c" hint-placeholder-count="3">
+                    <button onClick="{{ c.pick }}" style="flex:1; display:flex; flex-direction:column; gap:4px; align-items:flex-start; border:1.5px solid {{ c.bd }}; background:{{ c.bg }}; border-radius:10px; padding:12px 14px; font-family:inherit; cursor:pointer; text-align:left;">
+                      <span style="font-size:13.5px; font-weight:500; color:#22365C;">{{ c.label }}</span>
+                      <span style="font-size:11.5px; color:#8A94A6;">{{ c.hint }}</span>
+                    </button>
+                  </sc-for>
+                </div>
+                <svg viewBox="0 0 860 300" style="width:100%; display:block;">
+                  <g stroke="#C6D6F2" stroke-width="1.5" fill="none">
+                    <path d="M430 74 280 128M430 74 580 128" stroke="{{ s3EdgeColor }}" stroke-dasharray="{{ s3EdgeDash }}"></path>
+                    <sc-if value="{{ s3HasSecond }}"><path d="M{{ s3SecondX }} 186 {{ s3SecondLX }} 236M{{ s3SecondX }} 186 {{ s3SecondRX }} 236"></path></sc-if>
+                  </g>
+                  <g font-family="Noto Sans SC, sans-serif">
+                    <rect x="300" y="28" width="260" height="46" rx="11" fill="#EDF3FF" stroke="#2F63E8" stroke-width="1.6"></rect>
+                    <text x="430" y="57" font-size="15" font-weight="500" fill="#22365C" text-anchor="middle">{{ s3RootLabel }}</text>
+                    <text x="430" y="19" font-size="12" fill="#8A94A6" text-anchor="middle">16 个样本 · 8 苹果 / 8 橙子 · gini 0.500</text>
+                    <sc-if value="{{ s3NoRoot }}" hint-placeholder-val="{{ true }}">
+                      <g>
+                        <text x="352" y="104" font-size="12" fill="#B6C0D1">是</text>
+                        <text x="508" y="104" font-size="12" fill="#B6C0D1">否</text>
+                        <rect x="180" y="128" width="200" height="58" rx="11" fill="#FBFCFE" stroke="#DCE5F3" stroke-width="1.4" stroke-dasharray="6 5"></rect>
+                        <text x="280" y="163" font-size="13" fill="#A6B0C3" text-anchor="middle">满足条件的样本</text>
+                        <rect x="480" y="128" width="200" height="58" rx="11" fill="#FBFCFE" stroke="#DCE5F3" stroke-width="1.4" stroke-dasharray="6 5"></rect>
+                        <text x="580" y="163" font-size="13" fill="#A6B0C3" text-anchor="middle">其余样本</text>
+                        <text x="430" y="232" font-size="13" fill="#B6C0D1" text-anchor="middle">选好第一刀，这两个框会填上各自的样本和纯度</text>
+                      </g>
+                    </sc-if>
+                    <sc-if value="{{ s3HasRoot }}">
+                      <g>
+                        <rect x="180" y="128" width="200" height="58" rx="11" fill="{{ s3LFill }}" stroke="{{ s3LStroke }}" stroke-width="1.4"></rect>
+                        <text x="280" y="152" font-size="13.5" font-weight="700" fill="#22365C" text-anchor="middle">{{ s3LTitle }}</text>
+                        <text x="280" y="172" font-size="12" fill="#6C7A93" text-anchor="middle">{{ s3LSub }}</text>
+                        <rect x="480" y="128" width="200" height="58" rx="11" fill="{{ s3RFill }}" stroke="{{ s3RStroke }}" stroke-width="1.4"></rect>
+                        <text x="580" y="152" font-size="13.5" font-weight="700" fill="#22365C" text-anchor="middle">{{ s3RTitle }}</text>
+                        <text x="580" y="172" font-size="12" fill="#6C7A93" text-anchor="middle">{{ s3RSub }}</text>
+                      </g>
+                    </sc-if>
+                    <sc-if value="{{ s3HasSecond }}">
+                      <g>
+                        <rect x="{{ s3SecondLRX }}" y="236" width="170" height="50" rx="10" fill="#F4F7FC" stroke="#DCE5F3" stroke-width="1.3"></rect>
+                        <text x="{{ s3SecondLX }}" y="256" font-size="13" font-weight="700" fill="#22365C" text-anchor="middle">{{ s3S2LTitle }}</text>
+                        <text x="{{ s3SecondLX }}" y="274" font-size="11.5" fill="#6C7A93" text-anchor="middle">{{ s3S2LSub }}</text>
+                        <rect x="{{ s3SecondRRX }}" y="236" width="170" height="50" rx="10" fill="#F4F7FC" stroke="#DCE5F3" stroke-width="1.3"></rect>
+                        <text x="{{ s3SecondRX }}" y="256" font-size="13" font-weight="700" fill="#22365C" text-anchor="middle">{{ s3S2RTitle }}</text>
+                        <text x="{{ s3SecondRX }}" y="274" font-size="11.5" fill="#6C7A93" text-anchor="middle">{{ s3S2RSub }}</text>
+                      </g>
+                    </sc-if>
+                  </g>
+                </svg>
+              </div>
+              <div style="display:flex; align-items:flex-start; gap:12px; background:{{ s3FbBg }}; border:1px solid {{ s3FbBd }}; border-radius:11px; padding:14px 16px; margin-top:14px;">
+                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="{{ s3FbIcon }}" stroke-width="1.9" style="flex:none;"><circle cx="12" cy="12" r="9"></circle><path d="M12 8h.01M11 12h1v4h1"></path></svg>
+                <div style="font-size:13px; line-height:1.85; color:#4E5A6E; text-wrap:pretty;">{{ s3Feedback }}</div>
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ isS4 }}">
+            <div>
+              <div style="display:flex; align-items:center; gap:16px; background:#F6F8FC; border:1px solid #EAEEF6; border-radius:11px; padding:14px 18px; margin-bottom:14px;">
+                <span style="font-size:13.5px; font-weight:500; color:#3C4B66; flex:none;">最大深度</span>
+                <input type="range" min="1" max="8" step="1" value="{{ s4Depth }}" onInput="{{ s4SetDepth }}" style="flex:1; max-width:420px;" />
+                <span style="font-size:20px; font-weight:700; color:#2F63E8; min-width:104px;">depth = {{ s4Depth }}</span>
+                <span style="flex:1;"></span>
+                <div style="display:flex; gap:22px;">
+                  <div><div style="font-size:11.5px; color:#8A94A6;">叶子数</div><div style="font-size:15px; font-weight:700; color:#22365C;">{{ s4Leaves }}</div></div>
+                  <div><div style="font-size:11.5px; color:#8A94A6;">训练准确率</div><div style="font-size:15px; font-weight:700; color:#2F63E8;">{{ s4TrainAcc }}</div></div>
+                  <div><div style="font-size:11.5px; color:#8A94A6;">验证准确率</div><div style="font-size:15px; font-weight:700; color:{{ s4ValTone }};">{{ s4ValAcc }}</div></div>
+                </div>
+              </div>
+              <div style="border:1px solid #EAEEF6; border-radius:11px; padding:16px;">
+                <div style="font-size:15.5px; font-weight:700; color:#16233D; margin-bottom:4px;">树长成这样</div>
+                <svg viewBox="0 0 900 300" style="width:100%; display:block;">
+                  <sc-for list="{{ s4Edges }}" as="e" hint-placeholder-count="0"><path d="{{ e.d }}" stroke="#C6D6F2" stroke-width="1.3" fill="none"></path></sc-for>
+                  <sc-for list="{{ s4Internals }}" as="n" hint-placeholder-count="0">
+                    <g>
+                      <rect x="{{ n.x }}" y="{{ n.y }}" width="{{ n.w }}" height="{{ n.h }}" rx="8" fill="#EDF3FF" stroke="#9FC0F4" stroke-width="1.2"></rect>
+                      <text x="{{ n.tx }}" y="{{ n.ty }}" font-size="{{ n.fs }}" fill="#22365C" text-anchor="middle" font-family="Noto Sans SC, sans-serif">{{ n.label }}</text>
+                    </g>
+                  </sc-for>
+                  <sc-for list="{{ s4Leaves2 }}" as="l" hint-placeholder-count="0">
+                    <g>
+                      <circle cx="{{ l.cx }}" cy="{{ l.cy }}" r="{{ l.r }}" fill="{{ l.fill }}"></circle>
+                      <text x="{{ l.cx }}" y="{{ l.ty }}" font-size="{{ l.fs }}" fill="#6C7A93" text-anchor="middle" font-family="Noto Sans SC, sans-serif">{{ l.label }}</text>
+                    </g>
+                  </sc-for>
+                </svg>
+              </div>
+              <div style="border:1px solid #EAEEF6; border-radius:11px; padding:16px; margin-top:14px;">
+                <div style="display:flex; align-items:baseline; gap:10px; margin-bottom:8px;">
+                  <div style="font-size:15.5px; font-weight:700; color:#16233D;">同一棵树画出的决策边界</div>
+                  <div style="font-size:12px; color:#8A94A6;">横轴重量，纵轴果皮厚度，固定"有果香"</div>
+                </div>
+                <svg viewBox="0 0 900 215" style="width:100%; display:block;">
+                  <sc-for list="{{ s4Cells }}" as="c" hint-placeholder-count="0">
+                    <rect x="{{ c.x }}" y="{{ c.y }}" width="{{ c.w }}" height="{{ c.h }}" fill="{{ c.fill }}"></rect>
+                  </sc-for>
+                  <sc-for list="{{ s4Dots }}" as="d" hint-placeholder-count="0">
+                    <circle cx="{{ d.x }}" cy="{{ d.y }}" r="3.2" fill="{{ d.fill }}" opacity="0.85"></circle>
+                  </sc-for>
+                  <g font-size="12.5" fill="#8A94A6" font-family="Noto Sans SC, sans-serif">
+                    <text x="82" y="58" text-anchor="end">厚</text>
+                    <text x="82" y="118" text-anchor="end">中</text>
+                    <text x="82" y="178" text-anchor="end">薄</text>
+                    <text x="90" y="205" text-anchor="middle">110</text>
+                    <text x="285" y="205" text-anchor="middle">150</text>
+                    <text x="480" y="205" text-anchor="middle">190</text>
+                    <text x="675" y="205" text-anchor="middle">230</text>
+                    <text x="870" y="205" text-anchor="middle">270</text>
+                  </g>
+                </svg>
+                <div style="font-size:12.5px; line-height:1.85; color:#5B677C; margin-top:8px; text-wrap:pretty;">depth 越大，色带被切得越碎——那些只有几个像素宽的条纹，通常是为了照顾一两个训练样本而存在的。</div>
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ isS5 }}">
+            <div>
+              <div style="border:1px solid #EAEEF6; border-radius:11px; padding:16px;">
+                <div style="font-size:16px; font-weight:700; color:#16233D; margin:0 2px 6px;">训练误差 vs 验证误差（随 max_depth 变化）</div>
+                <div style="position:relative;">
+                  <svg viewBox="0 0 900 380" style="width:100%; display:block;" onClick="{{ s5Select }}">
+                    <rect x="{{ s5ShadeX }}" y="30" width="{{ s5ShadeW }}" height="290" fill="#FDF0EE" opacity="0.8"></rect>
+                    <g stroke="#EEF2F8" stroke-width="1"><path d="M70 40H860M70 96H860M70 152H860M70 208H860M70 264H860M70 320H860"></path></g>
+                    <path d="M70 30V320H860" stroke="#C9D2E0" stroke-width="1.3" fill="none"></path>
+                    <g font-size="13" fill="#8A94A6" font-family="Noto Sans SC, sans-serif" text-anchor="end">
+                      <text x="58" y="45">50%</text><text x="58" y="101">40%</text><text x="58" y="157">30%</text><text x="58" y="213">20%</text><text x="58" y="269">10%</text><text x="58" y="325">0%</text>
+                    </g>
+                    <g font-size="13" fill="#8A94A6" font-family="Noto Sans SC, sans-serif" text-anchor="middle">
+                      <sc-for list="{{ s5XTicks }}" as="t" hint-placeholder-count="0"><text x="{{ t.x }}" y="342">{{ t.label }}</text></sc-for>
+                      <text x="465" y="366" fill="#6C7A93">树的最大深度 max_depth</text>
+                    </g>
+                    <text x="24" y="175" font-size="13" fill="#6C7A93" text-anchor="middle" transform="rotate(-90 24 175)" font-family="Noto Sans SC, sans-serif">错误率</text>
+                    <path d="M{{ s5BestX }} 30V320" stroke="#3E9E6E" stroke-width="1.5" stroke-dasharray="6 5"></path>
+                    <path d="{{ s5TrainD }}" fill="none" stroke="#2F7DE8" stroke-width="2.6"></path>
+                    <path d="{{ s5ValD }}" fill="none" stroke="#EF5B4C" stroke-width="2.6"></path>
+                    <sc-for list="{{ s5TrainP }}" as="p" hint-placeholder-count="0"><circle cx="{{ p.x }}" cy="{{ p.y }}" r="4" fill="#2F7DE8"></circle></sc-for>
+                    <sc-for list="{{ s5ValP }}" as="p" hint-placeholder-count="0"><circle cx="{{ p.x }}" cy="{{ p.y }}" r="4" fill="#EF5B4C"></circle></sc-for>
+                  </svg>
+                  <sc-if value="{{ s5NoSel }}" hint-placeholder-val="{{ true }}">
+                    <div style="position:absolute; top:3%; right:3%; display:flex; flex-direction:column; gap:7px; background:#fff; border:1px solid #E6EBF4; border-radius:9px; padding:10px 13px; box-shadow:0 2px 6px rgba(23,43,77,.06);">
+                      <div style="display:flex; align-items:center; gap:8px; font-size:12.5px; color:#3C4B66; white-space:nowrap;">
+                        <svg width="26" height="8" viewBox="0 0 26 8"><path d="M0 4h26" stroke="#2F7DE8" stroke-width="2"></path><circle cx="13" cy="4" r="3.4" fill="#2F7DE8"></circle></svg>训练集错误率
+                      </div>
+                      <div style="display:flex; align-items:center; gap:8px; font-size:12.5px; color:#3C4B66; white-space:nowrap;">
+                        <svg width="26" height="8" viewBox="0 0 26 8"><path d="M0 4h26" stroke="#EF5B4C" stroke-width="2"></path><circle cx="13" cy="4" r="3.4" fill="#EF5B4C"></circle></svg>验证集错误率
+                      </div>
+                    </div>
+                  </sc-if>
+                  <sc-if value="{{ s5NoSel }}" hint-placeholder-val="{{ true }}">
+                    <div>
+                      <div style="position:absolute; left:{{ s5NoteLeft }}; top:34%; max-width:20%; background:#EAF7F0; border:1px solid #BFE3D0; border-radius:8px; padding:7px 11px; font-size:12.5px; line-height:1.55; color:#2E7A55;">
+                        验证误差在这里最低<br />depth = {{ s5Best }}
+                      </div>
+                      <div style="position:absolute; right:4%; top:52%; max-width:30%; font-size:12.5px; line-height:1.6; color:#C4796F; text-align:right;">
+                        再往右训练误差继续降<br />验证误差却在上升：过拟合
+                      </div>
+                    </div>
+                  </sc-if>
+                  <sc-if value="{{ s5HasSel }}">
+                    <div style="position:absolute; left:2%; top:2%; right:2%; display:flex; align-items:center; gap:10px; background:#FDEAE7; border:1px solid #F3B9B0; border-radius:8px; padding:7px 11px; font-size:12.5px; line-height:1.5; color:#B4362A;">
+                      <span style="flex:1;">已选中：depth {{ s5Best }} 之后的过拟合区间</span>
+                      <span onClick="{{ s5Clear }}" style="cursor:pointer; color:#D9705F; font-size:14px; flex:none;">✕</span>
+                    </div>
+                  </sc-if>
+                </div>
+              </div>
+              <div style="display:flex; align-items:stretch; background:#F6F8FC; border:1px solid #EAEEF6; border-radius:11px; margin-top:14px;">
+                <div style="flex:1; padding:14px 18px;">
+                  <div style="font-size:12.5px; color:#8A94A6; margin-bottom:3px;">验证误差最低点</div>
+                  <div style="font-size:15px; font-weight:700; color:#22365C;">depth = {{ s5Best }}</div>
+                </div>
+                <div style="width:1px; background:#E6EBF4; margin:12px 0;"></div>
+                <div style="flex:1; padding:14px 18px;">
+                  <div style="font-size:12.5px; color:#8A94A6; margin-bottom:3px;">此时验证误差</div>
+                  <div style="font-size:15px; font-weight:700; color:#22365C;">{{ s5BestErr }}</div>
+                </div>
+                <div style="width:1px; background:#E6EBF4; margin:12px 0;"></div>
+                <div style="flex:1; padding:14px 18px;">
+                  <div style="font-size:12.5px; color:#8A94A6; margin-bottom:3px;">depth = 8 时验证误差</div>
+                  <div style="font-size:15px; font-weight:700; color:#B4362A;">{{ s5DeepErr }}</div>
+                </div>
+                <div style="width:1px; background:#E6EBF4; margin:12px 0;"></div>
+                <div style="flex:1; padding:14px 18px;">
+                  <div style="font-size:12.5px; color:#8A94A6; margin-bottom:3px;">depth = 8 时训练误差</div>
+                  <div style="font-size:15px; font-weight:700; color:#2F63E8;">{{ s5DeepTrainErr }}</div>
+                </div>
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ isS6 }}">
+            <div>
+              <div style="display:flex; gap:14px; margin-bottom:14px;">
+                <div style="flex:1; display:flex; align-items:center; gap:14px; background:#F6F8FC; border:1px solid #EAEEF6; border-radius:11px; padding:14px 18px;">
+                  <span style="font-size:13px; color:#3C4B66; flex:none;">max_depth</span>
+                  <input type="range" min="1" max="8" step="1" value="{{ s6Depth }}" onInput="{{ s6SetDepth }}" style="flex:1;" />
+                  <span style="font-size:16px; font-weight:700; color:#2F63E8; min-width:22px; text-align:right;">{{ s6Depth }}</span>
+                </div>
+                <div style="flex:1; display:flex; align-items:center; gap:14px; background:#F6F8FC; border:1px solid #EAEEF6; border-radius:11px; padding:14px 18px;">
+                  <span style="font-size:13px; color:#3C4B66; flex:none;">min_samples_leaf</span>
+                  <input type="range" min="1" max="24" step="1" value="{{ s6Leaf }}" onInput="{{ s6SetLeaf }}" style="flex:1;" />
+                  <span style="font-size:16px; font-weight:700; color:#2F63E8; min-width:22px; text-align:right;">{{ s6Leaf }}</span>
+                </div>
+              </div>
+              <div style="border:1px solid #EAEEF6; border-radius:11px; padding:16px;">
+                <div style="display:flex; align-items:baseline; gap:12px; margin-bottom:4px;">
+                  <div style="font-size:15.5px; font-weight:700; color:#16233D;">剪枝后的树</div>
+                  <div style="font-size:12.5px; color:#8A94A6;">叶子 {{ s6LeafCount }} 个 · 训练误差 {{ s6TrainErr }} · 验证误差 {{ s6ValErr }}</div>
+                  <span style="flex:1;"></span>
+                  <div style="font-size:12.5px; font-weight:500; color:{{ s6VerdictTone }}; background:{{ s6VerdictBg }}; border-radius:7px; padding:5px 11px;">{{ s6Verdict }}</div>
+                </div>
+                <svg viewBox="0 0 900 260" style="width:100%; display:block;">
+                  <sc-for list="{{ s6Edges }}" as="e" hint-placeholder-count="0"><path d="{{ e.d }}" stroke="#C6D6F2" stroke-width="1.3" fill="none"></path></sc-for>
+                  <sc-for list="{{ s6Internals }}" as="n" hint-placeholder-count="0">
+                    <g>
+                      <rect x="{{ n.x }}" y="{{ n.y }}" width="{{ n.w }}" height="{{ n.h }}" rx="8" fill="#EDF3FF" stroke="#9FC0F4" stroke-width="1.2"></rect>
+                      <text x="{{ n.tx }}" y="{{ n.ty }}" font-size="{{ n.fs }}" fill="#22365C" text-anchor="middle" font-family="Noto Sans SC, sans-serif">{{ n.label }}</text>
+                    </g>
+                  </sc-for>
+                  <sc-for list="{{ s6Leaves2 }}" as="l" hint-placeholder-count="0">
+                    <g>
+                      <circle cx="{{ l.cx }}" cy="{{ l.cy }}" r="{{ l.r }}" fill="{{ l.fill }}"></circle>
+                      <text x="{{ l.cx }}" y="{{ l.ty }}" font-size="{{ l.fs }}" fill="#6C7A93" text-anchor="middle" font-family="Noto Sans SC, sans-serif">{{ l.label }}</text>
+                    </g>
+                  </sc-for>
+                </svg>
+              </div>
+
+              <div style="display:flex; gap:14px; margin-top:14px; align-items:stretch;">
+                <div style="flex:1; border:1px solid #EAEEF6; border-radius:11px; padding:16px;">
+                  <div style="font-size:14px; font-weight:700; color:#16233D; margin-bottom:10px;">小测验：新来一个水果</div>
+                  <div style="display:flex; gap:9px; margin-bottom:13px;">
+                    <span style="font-size:12.5px; color:#5B677C; background:#F4F7FC; border-radius:7px; padding:6px 11px;">重量 198 g</span>
+                    <span style="font-size:12.5px; color:#5B677C; background:#F4F7FC; border-radius:7px; padding:6px 11px;">有果香</span>
+                    <span style="font-size:12.5px; color:#5B677C; background:#F4F7FC; border-radius:7px; padding:6px 11px;">果皮中等厚</span>
+                  </div>
+                  <sc-if value="{{ quizAsking }}" hint-placeholder-val="{{ true }}">
+                    <div>
+                      <div style="font-size:15px; font-weight:500; color:#22365C; margin-bottom:12px;">{{ quizQuestion }}</div>
+                      <div style="display:flex; gap:10px;">
+                        <button onClick="{{ quizYes }}" style="flex:1; height:42px; border-radius:10px; border:none; background:#2F63E8; color:#fff; font-size:14px; font-weight:500; font-family:inherit; cursor:pointer;" style-hover="background:#2454CF">是</button>
+                        <button onClick="{{ quizNo }}" style="flex:1; height:42px; border-radius:10px; border:1px solid #DCE3EE; background:#fff; color:#3C4B66; font-size:14px; font-family:inherit; cursor:pointer;" style-hover="background:#F6F8FC">否</button>
+                      </div>
+                    </div>
+                  </sc-if>
+                  <sc-if value="{{ quizDone }}">
+                    <div>
+                      <div style="display:flex; align-items:center; gap:11px; background:{{ quizBg }}; border:1px solid {{ quizBd }}; border-radius:10px; padding:13px 15px;">
+                        <div style="font-size:15px; font-weight:700; color:#22365C;">{{ quizResult }}</div>
+                        <span style="flex:1;"></span>
+                        <div style="font-size:12.5px; font-weight:500; color:{{ quizTone }};">{{ quizVerdict }}</div>
+                      </div>
+                      <div style="font-size:12.5px; line-height:1.85; color:#5B677C; margin-top:11px;">{{ quizExplain }}</div>
+                      <button onClick="{{ quizReset }}" style="margin-top:12px; border:1px solid #E1E7F1; background:#fff; border-radius:8px; height:30px; padding:0 12px; font-size:12.5px; color:#5B677C; font-family:inherit; cursor:pointer;" style-hover="background:#F4F7FC">再走一遍</button>
+                    </div>
+                  </sc-if>
+                  <div style="font-size:12px; color:#A6B0C3; margin-top:12px;">你走的路径：{{ quizPathText }}</div>
+                </div>
+                <div style="flex:1; border:1px solid #EAEEF6; border-radius:11px; padding:16px;">
+                  <div style="font-size:14px; font-weight:700; color:#16233D; margin-bottom:11px;">这门课的结论</div>
+                  <div style="display:flex; flex-direction:column; gap:11px;">
+                    <div style="display:flex; gap:10px; font-size:12.5px; line-height:1.8; color:#5B677C;">
+                      <span style="width:20px; height:20px; flex:none; border-radius:50%; background:#EDF3FF; color:#2F63E8; font-size:11.5px; font-weight:600; display:flex; align-items:center; justify-content:center;">1</span>
+                      <span>决策树的每一步都在做同一件事：枚举所有"特征 + 阈值"，挑基尼下降最多的那一刀。</span>
+                    </div>
+                    <div style="display:flex; gap:10px; font-size:12.5px; line-height:1.8; color:#5B677C;">
+                      <span style="width:20px; height:20px; flex:none; border-radius:50%; background:#EDF3FF; color:#2F63E8; font-size:11.5px; font-weight:600; display:flex; align-items:center; justify-content:center;">2</span>
+                      <span>深度是复杂度的旋钮。不限制的话，树会一直分到每个叶子都"纯"，那时它记住的是样本，不是规律。</span>
+                    </div>
+                    <div style="display:flex; gap:10px; font-size:12.5px; line-height:1.8; color:#5B677C;">
+                      <span style="width:20px; height:20px; flex:none; border-radius:50%; background:#EDF3FF; color:#2F63E8; font-size:11.5px; font-weight:600; display:flex; align-items:center; justify-content:center;">3</span>
+                      <span>验证集是唯一能告诉你"该停在哪里"的东西。训练误差永远支持你把树建得更深。</span>
+                    </div>
+                    <div style="display:flex; gap:10px; font-size:12.5px; line-height:1.8; color:#5B677C;">
+                      <span style="width:20px; height:20px; flex:none; border-radius:50%; background:#EDF3FF; color:#2F63E8; font-size:11.5px; font-weight:600; display:flex; align-items:center; justify-content:center;">4</span>
+                      <span>剪枝就是把这个旋钮调回去：预剪枝在长之前限制，后剪枝按代价-复杂度剪掉收益低的分支。</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </sc-if>
+
+          <div style="display:flex; align-items:center; gap:12px; margin-top:16px;">
+            <button onClick="{{ prev }}" style="display:flex; align-items:center; gap:7px; height:40px; padding:0 16px; border-radius:10px; border:1px solid #DCE3EE; background:#fff; color:{{ prevTone }}; font-size:13.5px; font-family:inherit; cursor:pointer;" style-hover="background:#F6F8FC">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 12H5M11 6l-6 6 6 6"></path></svg>
+              上一步
+            </button>
+            <span style="flex:1;"></span>
+            <span style="font-size:12.5px; color:#8A94A6;">第 {{ step }} / 6 步 · {{ stepName }}</span>
+            <span style="flex:1;"></span>
+            <button onClick="{{ next }}" style="display:flex; align-items:center; gap:7px; height:40px; padding:0 18px; border-radius:10px; border:none; background:#2F63E8; color:#fff; font-size:13.5px; font-weight:500; font-family:inherit; cursor:pointer; box-shadow:0 2px 8px rgba(47,99,232,.28);" style-hover="background:#2454CF">
+              {{ nextLabel }}
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 12h15M13 6l6 6-6 6"></path></svg>
+            </button>
+          </div>
+        </section>
+
+        <sc-if value="{{ showCompare }}">
+          <section style="width:380px; flex:none; background:#fff; border:1px solid #E6EBF4; border-radius:13px; padding:18px; box-shadow:0 1px 2px rgba(23,43,77,.04); position:relative;">
+            <div style="position:absolute; left:-21px; top:38px; width:9px; height:9px; border-radius:50%; background:#2F63E8;"></div>
+            <div style="display:flex; align-items:center; gap:13px; margin-bottom:16px;">
+              <div style="width:38px; height:38px; flex:none; border-radius:10px; background:#2F63E8; display:flex; align-items:center; justify-content:center;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"></path><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"></path></svg>
+              </div>
+              <div style="flex:1; min-width:0;">
+                <div style="font-size:16.5px; font-weight:700; color:#16233D;">关联对象：两棵树的结构</div>
+                <div style="font-size:12.5px; color:#8A94A6; margin-top:3px;">刚好停住的树，和分得太细的树</div>
+              </div>
+              <button onClick="{{ s5Clear }}" style="width:32px; height:32px; flex:none; border-radius:9px; border:1px solid #E1E7F1; background:#fff; color:#8A94A6; font-family:inherit; cursor:pointer;" style-hover="background:#F4F7FC">✕</button>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:14px;">
+              <div style="border:1px solid #E6EBF4; border-radius:11px; padding:14px;">
+                <div style="display:flex; align-items:center; gap:9px; margin-bottom:6px;">
+                  <div style="font-size:14.5px; font-weight:700; color:#16233D;">depth = {{ s5Best }}</div>
+                  <span style="font-size:12px; font-weight:500; color:#2E7A55; background:#EAF7F0; border-radius:6px; padding:3px 9px;">泛化最好</span>
+                  <span style="flex:1;"></span>
+                  <span style="font-size:12px; color:#8A94A6;">验证误差 {{ s5BestErr }}</span>
+                </div>
+                <svg viewBox="0 0 400 180" style="width:100%; display:block;">
+                  <sc-for list="{{ cmpAEdges }}" as="e" hint-placeholder-count="0"><path d="{{ e.d }}" stroke="#C6D6F2" stroke-width="1.2" fill="none"></path></sc-for>
+                  <sc-for list="{{ cmpAInternals }}" as="n" hint-placeholder-count="0"><circle cx="{{ n.cx }}" cy="{{ n.cy }}" r="7" fill="#7FA9EE"></circle></sc-for>
+                  <sc-for list="{{ cmpALeaves }}" as="l" hint-placeholder-count="0"><circle cx="{{ l.cx }}" cy="{{ l.cy }}" r="5.5" fill="{{ l.fill }}"></circle></sc-for>
+                </svg>
+                <div style="font-size:12px; color:#7A8799; text-align:center;">{{ cmpALeafCount }} 个叶子</div>
+              </div>
+              <div style="border:1px solid #F6DCD7; background:#FEF8F6; border-radius:11px; padding:14px;">
+                <div style="display:flex; align-items:center; gap:9px; margin-bottom:6px;">
+                  <div style="font-size:14.5px; font-weight:700; color:#16233D;">depth = 8</div>
+                  <span style="font-size:12px; font-weight:500; color:#B4362A; background:#FBDDD8; border-radius:6px; padding:3px 9px;">过拟合</span>
+                  <span style="flex:1;"></span>
+                  <span style="font-size:12px; color:#8A7470;">验证误差 {{ s5DeepErr }}</span>
+                </div>
+                <svg viewBox="0 0 400 180" style="width:100%; display:block;">
+                  <sc-for list="{{ cmpBEdges }}" as="e" hint-placeholder-count="0"><path d="{{ e.d }}" stroke="#E3CFC9" stroke-width="1" fill="none"></path></sc-for>
+                  <sc-for list="{{ cmpBInternals }}" as="n" hint-placeholder-count="0"><circle cx="{{ n.cx }}" cy="{{ n.cy }}" r="4" fill="#C79A8F"></circle></sc-for>
+                  <sc-for list="{{ cmpBLeaves }}" as="l" hint-placeholder-count="0"><circle cx="{{ l.cx }}" cy="{{ l.cy }}" r="3.2" fill="{{ l.fill }}"></circle></sc-for>
+                </svg>
+                <div style="font-size:12px; color:#8A7470; text-align:center;">{{ cmpBLeafCount }} 个叶子</div>
+              </div>
+              <div style="display:flex; gap:12px; align-items:flex-start; background:#FFF9EC; border:1px solid #F5E3BE; border-radius:11px; padding:14px 15px;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#D99B1F" stroke-width="1.8" style="flex:none;"><path d="M9 17h6M10 21h4M12 3a6 6 0 0 1 3.6 10.8c-.4.3-.6.8-.6 1.2H9c0-.4-.2-.9-.6-1.2A6 6 0 0 1 12 3Z"></path></svg>
+                <div style="font-size:13px; line-height:1.75; color:#6B5A34; text-wrap:pretty;">下面那棵树的每个小叶子只覆盖两三个训练样本。它们在训练集上全对，换一批数据就开始猜错。</div>
+              </div>
+            </div>
+          </section>
+        </sc-if>
+      </div>
+    </main>
+
+    <aside style="width:292px; flex:none; background:#fff; border-left:1px solid #E6EBF4; display:flex; flex-direction:column;">
+      <div style="display:flex; align-items:center; gap:9px; padding:14px 16px; border-bottom:1px solid #EFF2F8;">
+        <div style="width:28px; height:28px; border-radius:50%; background:#DDE8FE; display:flex; align-items:center; justify-content:center;">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#2F63E8" stroke-width="1.8"><circle cx="12" cy="12" r="8.5"></circle><circle cx="9.3" cy="11" r="1.2" fill="#2F63E8" stroke="none"></circle><circle cx="14.7" cy="11" r="1.2" fill="#2F63E8" stroke="none"></circle><path d="M9.5 15.2c1.6 1 3.4 1 5 0"></path></svg>
+        </div>
+        <span style="font-size:14.5px; font-weight:700; color:#16233D;">AI 老师</span>
+        <span style="display:flex; align-items:center; gap:5px; font-size:11.5px; color:#8A94A6; background:#F4F7FC; border-radius:6px; padding:3px 7px;">
+          <span style="width:6px; height:6px; border-radius:50%; background:#B6C0D1; display:inline-block;"></span>待命
+        </span>
+        <span style="flex:1;"></span>
+        <span style="color:#B6C0D1; letter-spacing:1px; cursor:pointer;">···</span>
+      </div>
+
+      <div style="padding:16px; display:flex; flex-direction:column; gap:14px; flex:1; min-height:0;">
+        <sc-if value="{{ hintClosed }}" hint-placeholder-val="{{ true }}">
+          <div>
+            <div style="border:1px dashed #D6DFEE; border-radius:12px; padding:16px; text-align:center;">
+              <svg viewBox="0 0 160 110" style="width:104px; opacity:0.8;">
+                <ellipse cx="80" cy="103" rx="30" ry="5" fill="#EDF1F9"></ellipse>
+                <path d="M80 20v-6" stroke="#8FB0EE" stroke-width="3"></path><circle cx="80" cy="11" r="4" fill="#5BC8E8"></circle>
+                <rect x="48" y="22" width="64" height="50" rx="20" fill="#E8EFFB" stroke="#B9CDEF" stroke-width="2"></rect>
+                <rect x="57" y="32" width="46" height="30" rx="14" fill="#2B3E66"></rect>
+                <circle cx="70" cy="47" r="6" fill="#5BC8E8"></circle><circle cx="90" cy="47" r="6" fill="#5BC8E8"></circle>
+                <rect x="60" y="76" width="40" height="24" rx="10" fill="#DCE6F8" stroke="#B9CDEF" stroke-width="2"></rect>
+              </svg>
+              <div style="font-size:12.5px; line-height:1.8; color:#8A94A6; margin-top:6px; text-wrap:pretty;">我在旁边看着，卡住了再叫我。</div>
+              <button onClick="{{ openHint }}" style="width:100%; height:40px; margin-top:12px; border-radius:10px; border:1px solid #C9D9F7; background:#fff; color:#2F63E8; font-size:13.5px; font-weight:500; font-family:inherit; cursor:pointer;" style-hover="background:#F6FAFF">给我一个提示</button>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ hintOpen }}">
+          <div style="background:#F4F7FC; border:1px solid #E6EBF4; border-radius:12px; padding:14px 15px;">
+            <div style="display:flex; align-items:center; gap:8px; margin-bottom:9px;">
+              <span style="font-size:12px; font-weight:500; color:#2F63E8;">第 {{ step }} 步提示</span>
+              <span style="flex:1;"></span>
+              <span onClick="{{ closeHint }}" style="font-size:12px; color:#8A94A6; cursor:pointer;">收起</span>
+            </div>
+            <div style="font-size:13.5px; line-height:1.9; color:#3C4B66; text-wrap:pretty;">{{ hintText }}</div>
+          </div>
+        </sc-if>
+
+        <div style="height:1px; background:#EFF2F8;"></div>
+        <div style="font-size:12.5px; color:#8A94A6;">这一步你可能会问</div>
+        <div style="display:flex; flex-direction:column; gap:9px;">
+          <sc-for list="{{ suggestions }}" as="s" hint-placeholder-count="3">
+            <div onClick="{{ openHint }}" style="display:flex; align-items:center; gap:8px; border:1px solid #E6EBF4; border-radius:9px; padding:11px 12px; font-size:13px; color:#3C4B66; cursor:pointer;" style-hover="border-color:#C9D9F7;background:#FAFCFF">
+              <span style="flex:1; line-height:1.5;">{{ s }}</span>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#B6C0D1" stroke-width="2.2" style="flex:none;"><path d="M9 6l6 6-6 6"></path></svg>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="border:1px solid #EAEEF6; border-radius:11px; padding:13px 14px;">
+          <div style="font-size:12.5px; color:#8A94A6; margin-bottom:9px;">本课进度</div>
+          <div style="display:flex; flex-direction:column; gap:7px;">
+            <sc-for list="{{ steps }}" as="s" hint-placeholder-count="6">
+              <div onClick="{{ s.go }}" style="display:flex; align-items:center; gap:8px; font-size:12.5px; color:{{ s.tone }}; cursor:pointer;">
+                <span style="width:15px; height:15px; flex:none; border-radius:50%; background:{{ s.bg }}; border:1.5px solid {{ s.bd }};"></span>
+                <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ s.label }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+
+        <div style="flex:1; min-height:12px;"></div>
+        <div>
+          <div style="display:flex; align-items:center; gap:8px; border:1px solid #E1E7F1; border-radius:11px; padding:11px 12px; background:#FBFCFE;">
+            <input placeholder="有其他问题随时问我…" style="flex:1; min-width:0; border:none; outline:none; background:transparent; font-size:13px; font-family:inherit; color:#3C4B66;" />
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#2F63E8" stroke-width="1.9" style="cursor:pointer;"><path d="M4 12l16-7-7 16-2.4-6.6L4 12Z"></path></svg>
+          </div>
+          <div style="text-align:right; font-size:11.5px; color:#A6B0C3; margin-top:7px;">Shift + Enter 换行</div>
+        </div>
+      </div>
+    </aside>
+  </div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1460,&quot;height&quot;:980}}">
+const A = "apple", O = "orange";
+const SAMPLES = [
+  { c: A, w: 132, peel: 1, aroma: 1 }, { c: A, w: 145, peel: 1, aroma: 1 },
+  { c: A, w: 150, peel: 1, aroma: 0 }, { c: A, w: 158, peel: 1, aroma: 1 },
+  { c: A, w: 165, peel: 1, aroma: 1 }, { c: A, w: 172, peel: 1, aroma: 1 },
+  { c: A, w: 186, peel: 1, aroma: 1 }, { c: A, w: 195, peel: 2, aroma: 0 },
+  { c: O, w: 168, peel: 2, aroma: 1 }, { c: O, w: 175, peel: 2, aroma: 1 },
+  { c: O, w: 190, peel: 2, aroma: 1 }, { c: O, w: 205, peel: 3, aroma: 1 },
+  { c: O, w: 215, peel: 3, aroma: 1 }, { c: O, w: 228, peel: 3, aroma: 1 },
+  { c: O, w: 240, peel: 3, aroma: 1 }, { c: O, w: 252, peel: 3, aroma: 1 }
+];
+const PEEL = { 1: "薄", 2: "中", 3: "厚" };
+
+function counts(rows) {
+  let a = 0;
+  for (const r of rows) if (r.c === A) a++;
+  return { a, o: rows.length - a, n: rows.length };
+}
+function gini(rows) {
+  if (!rows.length) return 0;
+  const { a, n } = counts(rows);
+  const p = a / n;
+  return 1 - p * p - (1 - p) * (1 - p);
+}
+const f3 = v => v.toFixed(3);
+const pct = v => (v * 100).toFixed(1) + "%";
+
+function splitRows(rows, key, thr) {
+  const l = [], r = [];
+  for (const row of rows) (row[key] <= thr ? l : r).push(row);
+  return [l, r];
+}
+function splitLabel(key, thr) {
+  if (key === "w") return "重量 ≤ " + thr + " g";
+  if (key === "peel") return thr === 1 ? "果皮 = 薄" : "果皮 ≤ 中";
+  return "无果香";
+}
+function candidates(rows) {
+  const out = [];
+  const ws = [...new Set(rows.map(r => r.w))].sort((x, y) => x - y);
+  for (let i = 0; i + 1 < ws.length; i++) out.push({ key: "w", thr: Math.round((ws[i] + ws[i + 1]) / 2) });
+  out.push({ key: "peel", thr: 1 }, { key: "peel", thr: 2 }, { key: "aroma", thr: 0 });
+  return out;
+}
+function gainOf(rows, key, thr) {
+  const [l, r] = splitRows(rows, key, thr);
+  if (!l.length || !r.length) return -1;
+  return gini(rows) - (l.length * gini(l) + r.length * gini(r)) / rows.length;
+}
+function bestSplit(rows, minLeaf) {
+  let best = null;
+  for (const c of candidates(rows)) {
+    const [l, r] = splitRows(rows, c.key, c.thr);
+    if (l.length < minLeaf || r.length < minLeaf) continue;
+    const g = gainOf(rows, c.key, c.thr);
+    if (g > 1e-9 && (!best || g > best.gain)) best = { key: c.key, thr: c.thr, gain: g, l, r };
+  }
+  return best;
+}
+function grow(rows, depth, maxDepth, minLeaf) {
+  const cn = counts(rows);
+  const node = { n: rows.length, cls: cn.a >= cn.o ? A : O, a: cn.a, o: cn.o };
+  if (depth >= maxDepth || cn.a === 0 || cn.o === 0) return node;
+  const b = bestSplit(rows, minLeaf);
+  if (!b) return node;
+  node.split = { key: b.key, thr: b.thr };
+  node.left = grow(b.l, depth + 1, maxDepth, minLeaf);
+  node.right = grow(b.r, depth + 1, maxDepth, minLeaf);
+  return node;
+}
+function predict(node, row) {
+  while (node.split) node = row[node.split.key] <= node.split.thr ? node.left : node.right;
+  return node.cls;
+}
+function errRate(node, rows) {
+  let bad = 0;
+  for (const r of rows) if (predict(node, r) !== r.c) bad++;
+  return bad / rows.length;
+}
+function leafCount(n) { return n.split ? leafCount(n.left) + leafCount(n.right) : 1; }
+function treeDepth(n) { return n.split ? 1 + Math.max(treeDepth(n.left), treeDepth(n.right)) : 0; }
+
+const BIG = (() => {
+  let s = 20240616;
+  const rnd = () => { s = (s * 1664525 + 1013904223) % 4294967296; return s / 4294967296; };
+  const rows = [];
+  for (let i = 0; i < 300; i++) {
+    const w = Math.round(112 + rnd() * 156);
+    const u = rnd();
+    const peel = u < 0.38 ? 1 : u < 0.72 ? 2 : 3;
+    const aroma = rnd() < 0.68 ? 1 : 0;
+    let c;
+    if (peel === 1) c = A;
+    else if (peel === 2) c = w <= 185 ? A : O;
+    else c = aroma ? O : (w <= 200 ? A : O);
+    if (rnd() < 0.08) c = c === A ? O : A;
+    rows.push({ c, w, peel, aroma });
+  }
+  return rows;
+})();
+const TRAIN = BIG.filter((_, i) => i % 5 !== 0);
+const VAL = BIG.filter((_, i) => i % 5 === 0);
+
+const DEPTHS = [1, 2, 3, 4, 5, 6, 7, 8];
+const TREES = {};
+for (const d of DEPTHS) TREES[d] = grow(TRAIN, 0, d, 1);
+const CURVE = DEPTHS.map(d => ({ d, tr: errRate(TREES[d], TRAIN), va: errRate(TREES[d], VAL) }));
+const BEST = CURVE.reduce((m, p) => (p.va < m.va ? p : m), CURVE[0]).d;
+
+function layoutTree(tree, W, H, opt) {
+  const edges = [], internals = [], leaves = [];
+  const nLeaf = leafCount(tree), dMax = Math.max(1, treeDepth(tree));
+  const compact = opt.compact ?? nLeaf > 10;
+  const levelH = (H - (opt.pad ?? 50)) / dMax;
+  const slot = (W - 70) / nLeaf;
+  let idx = 0;
+  const nodeW = compact ? 0 : Math.min(150, slot * 1.7);
+  const fs = compact ? 0 : Math.max(9.5, Math.min(12.5, slot / 9));
+  function walk(n, dep) {
+    let x, y = 26 + dep * levelH;
+    if (!n.split) {
+      x = 35 + (idx + 0.5) * slot; idx++;
+      leaves.push({
+        cx: +x.toFixed(1), cy: +y.toFixed(1),
+        r: compact ? 4.2 : 9,
+        fill: n.cls === A ? "#E8543F" : "#F0921F",
+        label: compact ? "" : n.n + "",
+        ty: +(y + (compact ? 0 : 24)).toFixed(1),
+        fs: compact ? 0 : 11
+      });
+      return { x, y };
+    }
+    const l = walk(n.left, dep + 1), r = walk(n.right, dep + 1);
+    x = (l.x + r.x) / 2;
+    edges.push({ d: "M" + x.toFixed(1) + " " + (y + (compact ? 6 : 15)).toFixed(1) + "L" + l.x.toFixed(1) + " " + (l.y - (compact ? 5 : 14)).toFixed(1) });
+    edges.push({ d: "M" + x.toFixed(1) + " " + (y + (compact ? 6 : 15)).toFixed(1) + "L" + r.x.toFixed(1) + " " + (r.y - (compact ? 5 : 14)).toFixed(1) });
+    if (compact) {
+      internals.push({ cx: +x.toFixed(1), cy: +y.toFixed(1) });
+    } else {
+      internals.push({
+        x: +(x - nodeW / 2).toFixed(1), y: +(y - 14).toFixed(1),
+        w: +nodeW.toFixed(1), h: 28, tx: +x.toFixed(1), ty: +(y + 4).toFixed(1),
+        fs: +fs.toFixed(1), label: splitLabel(n.split.key, n.split.thr)
+      });
+    }
+    return { x, y };
+  }
+  walk(tree, 0);
+  return { edges, internals, leaves, compact, nLeaf };
+}
+
+const STEP_NAMES = ["什么是决策树", "如何选分裂", "亲手建一棵树", "深度的代价", "过拟合曲线", "剪枝与结论"];
+const WORK_TITLES = [
+  "当前正在查看：一棵建好的树",
+  "当前正在查看：分裂点与纯度",
+  "当前正在查看：你自己建的树",
+  "当前正在查看：深度与决策边界",
+  "当前正在查看：误差曲线",
+  "当前正在查看：剪枝后的树"
+];
+const HINTS = [
+  "先别管它怎么建出来的。顺着箭头读一遍：果皮薄的直接判苹果，剩下的再看重量。注意最右边那个叶子里混着 1 个苹果——树并不需要做到 100% 正确。",
+  "试试把三个特征都切一遍，看右边「最好成绩」那栏的排序。果皮厚度之所以赢，是因为它一刀就切出一个完全纯的分支；果香几乎人人都有，切了也白切。",
+  "第一刀选果皮厚度，你会立刻得到一个纯分支。如果先选果香，两边都还混着，后面的活会更难做——决策树是贪心的，第一刀选错就补不回来。",
+  "把滑块从 1 拖到 8，盯着下面的色带看。depth=2、3 的时候边界是大块的；到 depth=7、8，出现了很多细条纹，那些条纹只为了照顾一两个训练样本。",
+  "两条线在 depth=" + BEST + " 附近分家：蓝线（训练）继续往下，红线（验证）开始回头。点击图上任意位置可以选中过拟合区间，右侧会展开两棵树的结构对比。",
+  "先把 max_depth 调到 " + BEST + " 看验证误差；再把 min_samples_leaf 从 1 往上拖，你会看到叶子数迅速减少而验证误差几乎不变——那些叶子本来就没在干活。"
+];
+const SUGGESTIONS = [
+  ["为什么树要问「是 / 否」而不是直接算？", "节点里的数字是什么意思？", "为什么允许叶子里有错的样本？"],
+  ["基尼不纯度和信息熵有什么区别？", "连续特征的阈值是怎么枚举的？", "增益为 0 意味着什么？"],
+  ["决策树为什么是贪心算法？", "第一刀选错还能救回来吗？", "换个顺序会得到同一棵树吗？"],
+  ["深度和叶子数是什么关系？", "为什么边界都是横平竖直的？", "深度不设限会发生什么？"],
+  ["为什么训练误差一直在降？", "验证集应该留多少？", "交叉验证会不会更稳？"],
+  ["预剪枝和后剪枝该用哪个？", "min_samples_leaf 怎么定？", "随机森林是另一种解法吗？"]
+];
+const FEATS = [{ key: "peel", name: "果皮厚度" }, { key: "w", name: "重量" }, { key: "aroma", name: "果香" }];
+const S3_HINT = { peel: "增益最大的一刀", w: "还不错的一刀", aroma: "看起来没什么用" };
+
+const Q_TREE = {
+  q: "果皮是薄的吗？", key: "peel", yes: false,
+  no: { q: "重量 ≤ 180 g 吗？", key: "w", yes: false, no: { leaf: O }, yesNode: { leaf: O } },
+  yesNode: { leaf: A }
+};
+
+class Component extends DCLogic {
+  state = {
+    step: 1, hint: false, code: false,
+    t1: 0,
+    s2Feat: "peel", s2Thr: { peel: 1, w: 180, aroma: 0 },
+    s3Root: null, s3Second: null,
+    s4Depth: 3, s5Sel: false,
+    s6Depth: 5, s6Leaf: 6,
+    quiz: []
+  };
+
+  go(n) { this.setState({ step: n, hint: false }); }
+
+  s2Numbers() {
+    const key = this.state.s2Feat, thr = this.state.s2Thr[key];
+    const [l, r] = splitRows(SAMPLES, key, thr);
+    const before = gini(SAMPLES);
+    const after = (l.length * gini(l) + r.length * gini(r)) / SAMPLES.length;
+    return { key, thr, l, r, before, gl: gini(l), gr: gini(r), gain: before - after };
+  }
+
+  s2Ranking() {
+    return FEATS.map(f => {
+      let best = null;
+      for (const c of candidates(SAMPLES)) {
+        if (c.key !== f.key) continue;
+        const g = gainOf(SAMPLES, c.key, c.thr);
+        if (!best || g > best.g) best = { g, thr: c.thr };
+      }
+      return { key: f.key, name: f.name, gain: f3(best.g), raw: best.g, cond: splitLabel(f.key, best.thr) };
+    }).sort((x, y) => y.raw - x.raw);
+  }
+
+  s3Vals() {
+    const root = this.state.s3Root;
+    const out = {
+      s3HasRoot: !!root, s3HasSecond: false,
+      s3RootLabel: root ? splitLabel(root, root === "w" ? 180 : root === "peel" ? 1 : 0) : "点下面的按钮，选第一刀切什么",
+      s3Prompt: root ? "第二刀：在还混着的那一边继续切" : "第一刀：你要问哪个问题？",
+      s3Choices: [], s3Feedback: "决策树是贪心的：每一步只看眼前哪一刀最划算。你也来做一次这个选择。",
+      s3FbBg: "#F6F8FC", s3FbBd: "#EAEEF6", s3FbIcon: "#8A94A6",
+      s3LFill: "#F4F7FC", s3LStroke: "#DCE5F3", s3RFill: "#F4F7FC", s3RStroke: "#DCE5F3",
+      s3LTitle: "", s3LSub: "", s3RTitle: "", s3RSub: "",
+      s3NoRoot: !root, s3EdgeColor: root ? "#C6D6F2" : "#E3E9F3", s3EdgeDash: root ? "none" : "6 5",
+      s3SecondX: 580, s3SecondLX: 490, s3SecondRX: 670, s3SecondLRX: 405, s3SecondRRX: 585,
+      s3S2LTitle: "", s3S2LSub: "", s3S2RTitle: "", s3S2RSub: ""
+    };
+    const mk = (key, disabled) => ({
+      label: FEATS.find(f => f.key === key).name, hint: S3_HINT[key],
+      bd: "#DCE5F3", bg: "#fff", pick: () => this.setState(s => (s.s3Root ? { s3Second: key } : { s3Root: key }))
+    });
+    if (!root) {
+      out.s3Choices = FEATS.map(f => mk(f.key));
+      return out;
+    }
+    const thr = root === "w" ? 180 : root === "peel" ? 1 : 0;
+    const [l, r] = splitRows(SAMPLES, root, thr);
+    const cl = counts(l), cr = counts(r);
+    const pure = s => s.a === 0 || s.o === 0;
+    const desc = (c) => c.a + " 苹果 / " + c.o + " 橙子";
+    out.s3LTitle = pure(cl) ? (cl.a ? "🍎 纯：全是苹果" : "🍊 纯：全是橙子") : "还混着";
+    out.s3LSub = desc(cl) + " · gini " + f3(gini(l));
+    out.s3RTitle = pure(cr) ? (cr.a ? "🍎 纯：全是苹果" : "🍊 纯：全是橙子") : "还混着";
+    out.s3RSub = desc(cr) + " · gini " + f3(gini(r));
+    if (pure(cl)) { out.s3LFill = "#EAF7F0"; out.s3LStroke = "#BFE3D0"; }
+    if (pure(cr)) { out.s3RFill = "#EAF7F0"; out.s3RStroke = "#BFE3D0"; }
+    const g = gainOf(SAMPLES, root, thr);
+    const bestG = gainOf(SAMPLES, "peel", 1);
+    const pureNote = pure(cl) && pure(cr)
+      ? "两边直接都纯了"
+      : pure(cl) || pure(cr)
+        ? "切出了一个纯分支，另一边还混着 " + (pure(cl) ? r.length : l.length) + " 个样本"
+        : "两边都还混着";
+    if (root === "peel") {
+      out.s3Feedback = "好选择。这一刀增益 " + f3(g) + "，是三个特征里最大的：左边 7 个样本全是苹果，直接变成叶子，只剩右边 9 个要继续处理。";
+      out.s3FbBg = "#EAF7F0"; out.s3FbBd = "#BFE3D0"; out.s3FbIcon = "#3E9E6E";
+    } else {
+      out.s3Feedback = "这一刀增益 " + f3(g) + "，算法会选果皮厚度（增益 " + f3(bestG) + "）。你这一刀" + pureNote + "，接下来要看第二刀能不能补回来——决策树是贪心的，第一刀的质量决定了整棵树的大小。";
+      out.s3FbBg = "#FFF9EC"; out.s3FbBd = "#F5E3BE"; out.s3FbIcon = "#D99B1F";
+    }
+    const impure = pure(cl) ? (pure(cr) ? null : "right") : "left";
+    if (!impure) {
+      out.s3Prompt = "两边都纯了，这棵树已经建完";
+      out.s3Choices = FEATS.filter(f => f.key !== root).map(f => mk(f.key));
+      return out;
+    }
+    const rows = impure === "left" ? l : r;
+    out.s3SecondX = impure === "left" ? 280 : 580;
+    out.s3SecondLX = out.s3SecondX - 90; out.s3SecondRX = out.s3SecondX + 90;
+    out.s3SecondLRX = out.s3SecondLX - 85; out.s3SecondRRX = out.s3SecondRX - 85;
+    const rest = FEATS.filter(f => f.key !== root);
+    const second = this.state.s3Second;
+    if (!second) {
+      out.s3Choices = rest.map(f => mk(f.key));
+      out.s3Prompt = "第二刀：切" + (impure === "left" ? "左" : "右") + "边那 " + rows.length + " 个样本";
+      return out;
+    }
+    let bs = null;
+    for (const c of candidates(rows)) {
+      if (c.key !== second) continue;
+      const gg = gainOf(rows, c.key, c.thr);
+      const [ll, rr] = splitRows(rows, c.key, c.thr);
+      if (!ll.length || !rr.length) continue;
+      if (!bs || gg > bs.g) bs = { g: gg, thr: c.thr, ll, rr };
+    }
+    out.s3Choices = rest.map(f => mk(f.key));
+    out.s3HasSecond = !!bs;
+    out.s3Prompt = "第二刀：切" + (impure === "left" ? "左" : "右") + "边那 " + rows.length + " 个样本";
+    if (bs) {
+      const c1 = counts(bs.ll), c2 = counts(bs.rr);
+      out.s3S2LTitle = splitLabel(second, bs.thr) + " ✓";
+      out.s3S2LSub = c1.a + " 苹果 / " + c1.o + " 橙子 · gini " + f3(gini(bs.ll));
+      out.s3S2RTitle = "不满足";
+      out.s3S2RSub = c2.a + " 苹果 / " + c2.o + " 橙子 · gini " + f3(gini(bs.rr));
+      const pureSide = impure === "left" ? r : l;
+      const mistakes = g2 => { const c = counts(g2); return Math.min(c.a, c.o); };
+      const mine = mistakes(pureSide) + mistakes(bs.ll) + mistakes(bs.rr);
+      const algo = Math.round(errRate(grow(SAMPLES, 0, 2, 1), SAMPLES) * SAMPLES.length);
+      const cmp = mine === algo ? "和算法的两层树持平（同样错 " + algo + " 个）"
+        : mine < algo ? "比算法的两层树还少错 " + (algo - mine) + " 个"
+        : "算法的两层树只错 " + algo + " 个";
+      out.s3Feedback = out.s3Feedback + " 你这棵两层的树在 16 个样本上错 " + mine + " 个，" + cmp + "。";
+    }
+    return out;
+  }
+
+  quizVals() {
+    const path = this.state.quiz;
+    const sample = { w: 198, peel: 2, aroma: 1, c: O };
+    let node = Q_TREE, i = 0;
+    while (node.q && i < path.length) { node = path[i] ? node.yesNode : node.no; i++; }
+    const asking = !!node.q;
+    const label = n => (n === A ? "🍎 苹果" : "🍊 橙子");
+    const names = [];
+    let cur = Q_TREE;
+    for (let k = 0; k < path.length && cur.q; k++) { names.push(cur.q + (path[k] ? " 是" : " 否")); cur = path[k] ? cur.yesNode : cur.no; }
+    const ok = !asking && node.leaf === sample.c;
+    return {
+      quizAsking: asking, quizDone: !asking,
+      quizQuestion: asking ? node.q : "",
+      quizResult: asking ? "" : "这棵树判定：" + label(node.leaf),
+      quizVerdict: asking ? "" : ok ? "走对了 · 真实答案是橙子" : "走错了 · 真实答案是橙子",
+      quizTone: ok ? "#3E9E6E" : "#B4362A",
+      quizBg: ok ? "#EAF7F0" : "#FDEAE7", quizBd: ok ? "#BFE3D0" : "#F3B9B0",
+      quizExplain: asking ? "" : ok
+        ? "果皮中等厚 → 走「否」；重量 198 g 大于 180 → 再走「否」，落到最右边那个叶子。这个叶子里 7 个样本有 6 个是橙子，所以判橙子。"
+        : "再看一眼样本：果皮是「中」，不是薄；重量 198 g 比 180 大。两个问题都该走「否」。",
+      quizPathText: names.length ? names.join(" → ") : "还没开始",
+      quizYes: () => this.setState(s => ({ quiz: [...s.quiz, true] })),
+      quizNo: () => this.setState(s => ({ quiz: [...s.quiz, false] })),
+      quizReset: () => this.setState({ quiz: [] })
+    };
+  }
+
+  renderVals() {
+    const st = this.state, step = st.step;
+    const steps = STEP_NAMES.map((label, i) => {
+      const n = i + 1, active = n === step, done = n < step;
+      return {
+        n, label, go: () => this.go(n),
+        bg: active ? "#2F63E8" : done ? "#DDE8FE" : "#fff",
+        fg: active ? "#fff" : done ? "#2F63E8" : "#A6B0C3",
+        bd: active ? "#2F63E8" : done ? "#DDE8FE" : "#DCE5F3",
+        tone: active ? "#16233D" : done ? "#4E5A6E" : "#A6B0C3",
+        weight: active ? "700" : "400",
+        line: done ? "#C9D9F7" : "#EAEEF6"
+      };
+    });
+
+    const s2 = this.s2Numbers();
+    const xw = w => 70 + ((w - 100) / 180) * 790;
+    const yp = p => (p === 3 ? 67 : p === 2 ? 142 : 217);
+    const s2Points = SAMPLES.map(r => ({
+      x: +xw(r.w).toFixed(1), y: yp(r.peel), r: 7,
+      fill: r.aroma ? (r.c === A ? "#E8543F" : "#F0921F") : "#fff",
+      stroke: r.c === A ? "#E8543F" : "#F0921F"
+    }));
+    const s2LineXAbs = +xw(s2.thr + 0.5).toFixed(1);
+
+    const s4tree = TREES[st.s4Depth];
+    const L4 = layoutTree(s4tree, 900, 300, { compact: leafCount(s4tree) > 10 });
+    const cells = [];
+    const rowsY = { 3: 30, 2: 90, 1: 150 };
+    for (const p of [3, 2, 1]) {
+      for (let i = 0; i < 78; i++) {
+        const w = 110 + (i + 0.5) * (160 / 78);
+        const cls = predict(s4tree, { w, peel: p, aroma: 1 });
+        cells.push({ x: +(90 + i * 10).toFixed(1), y: rowsY[p], w: 10.2, h: 50, fill: cls === A ? "#F9DCD5" : "#FCE7C4" });
+      }
+    }
+    const dots = TRAIN.filter((_, i) => i % 3 === 0).map((r, i) => ({
+      x: +(90 + Math.max(0, Math.min(1, (r.w - 110) / 160)) * 780).toFixed(1),
+      y: rowsY[r.peel] + 14 + ((i * 7) % 24),
+      fill: r.c === A ? "#C0392B" : "#C87A12"
+    }));
+
+    const x5 = d => 70 + ((d - 1) / 7) * 790;
+    const y5 = e => 320 - (Math.min(e, 0.5) / 0.5) * 280;
+    const pts = k => CURVE.map(p => ({ x: +x5(p.d).toFixed(1), y: +y5(p[k]).toFixed(1) }));
+    const pathOf = ps => ps.map((p, i) => (i ? "L" : "M") + p.x + " " + p.y).join(" ");
+    const trainP = pts("tr"), valP = pts("va");
+    const bestPoint = CURVE.find(p => p.d === BEST);
+    const deep = CURVE[CURVE.length - 1];
+    const cmpA = layoutTree(TREES[BEST], 400, 180, { compact: true, pad: 40 });
+    const cmpB = layoutTree(TREES[8], 400, 180, { compact: true, pad: 40 });
+
+    const s6tree = grow(TRAIN, 0, st.s6Depth, st.s6Leaf);
+    const L6 = layoutTree(s6tree, 900, 260, { compact: leafCount(s6tree) > 10 });
+    const s6ValErr = errRate(s6tree, VAL);
+    const goodVal = s6ValErr <= bestPoint.va + 0.02;
+
+    return {
+      step, stepName: STEP_NAMES[step - 1], steps,
+      progress: Math.round((step / 6) * 100) + "%",
+      isS1: step === 1, isS2: step === 2, isS3: step === 3, isS4: step === 4, isS5: step === 5, isS6: step === 6,
+      workTitle: WORK_TITLES[step - 1],
+      nextLabel: step === 6 ? "完成这一课" : "下一步",
+      prevTone: step === 1 ? "#B6C0D1" : "#3C4B66",
+      next: () => this.go(Math.min(6, step + 1)),
+      prev: () => this.go(Math.max(1, step - 1)),
+      hintOpen: st.hint, hintClosed: !st.hint,
+      hintText: HINTS[step - 1],
+      suggestions: SUGGESTIONS[step - 1],
+      openHint: () => this.setState({ hint: true }),
+      closeHint: () => this.setState({ hint: false }),
+      showCode: st.code, codeBg: st.code ? "#EDF3FF" : "#fff",
+      toggleCode: () => this.setState(s => ({ code: !s.code })),
+      codeDepth: step === 6 ? st.s6Depth : st.s4Depth,
+      codeLeaf: step === 6 ? st.s6Leaf : 1,
+      codeTrainErr: step === 6 ? pct(errRate(s6tree, TRAIN)) : pct(CURVE[st.s4Depth - 1].tr),
+      codeValErr: step === 6 ? pct(s6ValErr) : pct(CURVE[st.s4Depth - 1].va),
+
+      t1Open1: st.t1 >= 1, t1Open2: st.t1 >= 2,
+      t1Expand1: () => this.setState(s => ({ t1: Math.max(1, s.t1) })),
+      t1Expand2: () => this.setState({ t1: 2 }),
+      t1Reset: () => this.setState({ t1: 0 }),
+      tableRows: SAMPLES.filter((_, i) => i < 4 || (i >= 8 && i < 12)).map(r => ({
+        cls: r.c === A ? "🍎 苹果" : "🍊 橙子", color: r.c === A ? "#C0392B" : "#B4780F",
+        w: r.w, aroma: r.aroma ? "有" : "无", peel: PEEL[r.peel]
+      })),
+
+      featChoices: FEATS.map(f => ({
+        name: f.name, pick: () => this.setState({ s2Feat: f.key }),
+        bd: st.s2Feat === f.key ? "#2F63E8" : "#DCE5F3",
+        bg: st.s2Feat === f.key ? "#EDF3FF" : "#fff",
+        fg: st.s2Feat === f.key ? "#2F63E8" : "#4E5A6E"
+      })),
+      s2Title: "按「" + splitLabel(s2.key, s2.thr) + "」把 16 个样本分成两边",
+      s2Min: s2.key === "w" ? 110 : s2.key === "peel" ? 1 : 0,
+      s2Max: s2.key === "w" ? 250 : s2.key === "peel" ? 2 : 0,
+      s2Step: s2.key === "w" ? 5 : 1,
+      s2Thr: s2.thr,
+      s2ThrLabel: s2.key === "w" ? s2.thr + " g" : s2.key === "peel" ? "≤ " + PEEL[s2.thr] : "无果香",
+      s2SetThr: e => { const v = +e.target.value; this.setState(s => ({ s2Thr: { ...s.s2Thr, [s.s2Feat]: v } })); },
+      s2Points,
+      s2IsVertical: s2.key === "w", s2IsHorizontal: s2.key === "peel",
+      s2LineXAbs, s2LineX: +(s2LineXAbs - 70).toFixed(1),
+      s2LineY: s2.thr === 1 ? 180 : 105, s2LineH: s2.thr === 1 ? 100 : 175,
+      s2GiniBefore: f3(s2.before), s2GiniLeft: f3(s2.gl), s2GiniRight: f3(s2.gr),
+      s2Gain: f3(s2.gain), s2LeftN: s2.l.length, s2RightN: s2.r.length,
+      s2BarBefore: (s2.before / 0.5) * 100 + "%",
+      s2BarLeft: (s2.gl / 0.5) * 100 + "%",
+      s2BarRight: (s2.gr / 0.5) * 100 + "%",
+      s2Ranking: this.s2Ranking().map((r, i) => ({
+        ...r, bd: i === 0 ? "#BFE3D0" : "#EAEEF6", bg: i === 0 ? "#F4FBF7" : "#fff",
+        tone: i === 0 ? "#2E7A55" : "#5B677C"
+      })),
+
+      ...this.s3Vals(),
+      s3Reset: () => this.setState({ s3Root: null, s3Second: null }),
+
+      s4Depth: st.s4Depth,
+      s4SetDepth: e => this.setState({ s4Depth: +e.target.value }),
+      s4Leaves: leafCount(s4tree),
+      s4TrainAcc: pct(1 - CURVE[st.s4Depth - 1].tr),
+      s4ValAcc: pct(1 - CURVE[st.s4Depth - 1].va),
+      s4ValTone: st.s4Depth > BEST ? "#B4362A" : "#3E9E6E",
+      s4Edges: L4.edges, s4Internals: L4.compact ? [] : L4.internals, s4Leaves2: L4.leaves,
+      s4Cells: cells, s4Dots: dots,
+
+      s5TrainD: pathOf(trainP), s5ValD: pathOf(valP), s5TrainP: trainP, s5ValP: valP,
+      s5XTicks: CURVE.map(p => ({ x: +x5(p.d).toFixed(1), label: p.d + "" })),
+      s5Best: BEST, s5BestX: +x5(BEST).toFixed(1),
+      s5ShadeX: +x5(BEST).toFixed(1), s5ShadeW: +(860 - x5(BEST)).toFixed(1),
+      s5BestErr: pct(bestPoint.va), s5DeepErr: pct(deep.va), s5DeepTrainErr: pct(deep.tr),
+      s5NoteLeft: Math.round(((x5(BEST) + 14) / 900) * 100) + "%",
+      s5HasSel: st.s5Sel, s5NoSel: !st.s5Sel,
+      s5Select: () => this.setState({ s5Sel: true }),
+      s5Clear: () => this.setState({ s5Sel: false }),
+      showCompare: step === 5 && st.s5Sel,
+      cmpAEdges: cmpA.edges, cmpAInternals: cmpA.internals, cmpALeaves: cmpA.leaves, cmpALeafCount: cmpA.nLeaf,
+      cmpBEdges: cmpB.edges, cmpBInternals: cmpB.internals, cmpBLeaves: cmpB.leaves, cmpBLeafCount: cmpB.nLeaf,
+
+      s6Depth: st.s6Depth, s6Leaf: st.s6Leaf,
+      s6SetDepth: e => this.setState({ s6Depth: +e.target.value }),
+      s6SetLeaf: e => this.setState({ s6Leaf: +e.target.value }),
+      s6Edges: L6.edges, s6Internals: L6.compact ? [] : L6.internals, s6Leaves2: L6.leaves,
+      s6LeafCount: leafCount(s6tree),
+      s6TrainErr: pct(errRate(s6tree, TRAIN)), s6ValErr: pct(s6ValErr),
+      s6Verdict: goodVal ? "剪得不错：验证误差接近最低点" : "还可以再剪：验证误差偏高",
+      s6VerdictTone: goodVal ? "#2E7A55" : "#B4362A",
+      s6VerdictBg: goodVal ? "#EAF7F0" : "#FDEAE7",
+      ...this.quizVals()
+    };
+  }
+}
+
+</script>
+</body>
+</html>

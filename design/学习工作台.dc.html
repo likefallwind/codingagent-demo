@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet" />
+<style>
+  html, body { margin:0; padding:0; background:#F4F7FC; font-family:"Noto Sans SC","PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif; -webkit-font-smoothing:antialiased; }
+  * { box-sizing:border-box; }
+  a { color:#2F63E8; text-decoration:none; }
+  a:hover { color:#1B47B8; }
+  ::placeholder { color:#A6B0C3; }
+</style>
+</helmet>
+
+<div style="min-width:1240px; min-height:100vh; display:flex; flex-direction:column; background:#F4F7FC; color:#1C2536;">
+
+  <header style="height:52px; flex:none; display:flex; align-items:center; gap:18px; padding:0 22px; background:#FFFFFF; border-bottom:1px solid #E6EBF4;">
+    <div style="display:flex; align-items:center; gap:9px;">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="11" fill="#EAF1FF"></circle><path d="M8 15.5 15.5 7.5 13.6 13.2h3L9.2 20l2-6.3H8Z" fill="#2F63E8"></path></svg>
+      <span style="font-size:17px; font-weight:700; letter-spacing:-0.2px;">LearnAI</span>
+      <span style="font-size:11px; font-weight:500; color:#2F63E8; background:#E7EFFF; border-radius:5px; padding:2px 6px;">Beta</span>
+    </div>
+    <div style="width:1px; height:22px; background:#E6EBF4;"></div>
+    <div style="font-size:13px; color:#8A94A6;">用 AI，深入理解每一个问题</div>
+    <div style="flex:1;"></div>
+    <div style="display:flex; align-items:center; gap:18px;">
+      <button style="display:flex; align-items:center; gap:6px; background:none; border:none; padding:0; cursor:pointer; font-size:13px; color:#5B677C; font-family:inherit;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#5B677C" stroke-width="2"><circle cx="11" cy="11" r="7"></circle><path d="M16.5 16.5 21 21"></path></svg>
+        搜索
+      </button>
+      <button style="background:none; border:none; padding:0; cursor:pointer; display:flex;">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#8A94A6" stroke-width="2"><circle cx="12" cy="12" r="4.2"></circle><path d="M12 3v2.2M12 18.8V21M3 12h2.2M18.8 12H21M5.6 5.6l1.6 1.6M16.8 16.8l1.6 1.6M18.4 5.6l-1.6 1.6M7.2 16.8l-1.6 1.6"></path></svg>
+      </button>
+      <div style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+        <div style="width:27px; height:27px; border-radius:50%; background:#2F63E8; color:#fff; font-size:12px; font-weight:600; display:flex; align-items:center; justify-content:center;">S</div>
+        <span style="font-size:13px; color:#3C475C;">学习中</span>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#8A94A6" stroke-width="2.4"><path d="M6 9l6 6 6-6"></path></svg>
+      </div>
+    </div>
+  </header>
+
+  <div style="flex:1; display:flex; align-items:stretch; min-height:0;">
+
+    <aside style="width:236px; flex:none; background:#FFFFFF; border-right:1px solid #E6EBF4; padding:14px 14px 0; display:flex; flex-direction:column;">
+      <nav style="display:flex; flex-direction:column; gap:2px;">
+        <div style="display:flex; align-items:center; gap:11px; height:40px; padding:0 12px; border-radius:9px; background:#EDF3FF; color:#2F63E8; font-size:14px; font-weight:500; cursor:pointer; box-shadow:inset 2px 0 0 #2F63E8;">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 11l8-6.5 8 6.5v8a1 1 0 0 1-1 1h-4v-6h-6v6H5a1 1 0 0 1-1-1v-8Z"></path></svg>
+          学习工作台
+        </div>
+        <div style="display:flex; align-items:center; gap:11px; height:40px; padding:0 12px; border-radius:9px; color:#4E5A6E; font-size:14px; cursor:pointer;" style-hover="background:#F4F7FC">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 3h8M9 3v5.5L5 19a2 2 0 0 0 1.9 2.6h10.2A2 2 0 0 0 19 19l-4-10.5V3"></path></svg>
+          我的实验
+        </div>
+        <div style="display:flex; align-items:center; gap:11px; height:40px; padding:0 12px; border-radius:9px; color:#4E5A6E; font-size:14px; cursor:pointer;" style-hover="background:#F4F7FC">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="4" width="16" height="16" rx="2"></rect><path d="M4 9h16M10 9v11"></path></svg>
+          知识库
+        </div>
+        <div style="display:flex; align-items:center; gap:11px; height:40px; padding:0 12px; border-radius:9px; color:#4E5A6E; font-size:14px; cursor:pointer;" style-hover="background:#F4F7FC">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 20l3.5-1 11-11a2.1 2.1 0 0 0-3-3l-11 11L4 20Z"></path></svg>
+          灵感笔记
+        </div>
+        <div style="display:flex; align-items:center; gap:11px; height:40px; padding:0 12px; border-radius:9px; color:#4E5A6E; font-size:14px; cursor:pointer;" style-hover="background:#F4F7FC">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 20V12M10 20V5M15 20v-6M20 20V9"></path></svg>
+          学习统计
+        </div>
+      </nav>
+
+      <div style="height:1px; background:#EAEEF6; margin:16px 2px;"></div>
+
+      <div style="display:flex; align-items:center; gap:7px; font-size:12.5px; color:#8A94A6; padding:0 4px; margin-bottom:9px;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8"></circle><circle cx="12" cy="12" r="2.6"></circle></svg>
+        当前主题
+      </div>
+      <div style="background:#EDF3FF; border:1px solid #D9E5FF; border-radius:10px; padding:12px 13px;">
+        <div style="font-size:14px; font-weight:700; color:#22365C; margin-bottom:5px;">决策树过拟合</div>
+        <div style="font-size:12px; line-height:1.6; color:#6C7A93;">理解模型复杂度与泛化能力的权衡</div>
+      </div>
+
+      <div style="display:flex; align-items:center; gap:7px; font-size:12.5px; color:#8A94A6; padding:0 4px; margin:20px 0 6px;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H11v16H5.5A1.5 1.5 0 0 1 4 18.5v-13ZM20 5.5A1.5 1.5 0 0 0 18.5 4H13v16h5.5A1.5 1.5 0 0 0 20 18.5v-13Z"></path></svg>
+        相关概念
+      </div>
+      <div style="display:flex; flex-direction:column;">
+        <div style="display:flex; align-items:center; gap:9px; height:34px; padding:0 8px; border-radius:8px; font-size:13.5px; color:#4E5A6E; cursor:pointer;" style-hover="background:#F4F7FC">
+          <svg width="9" height="9" viewBox="0 0 10 10" fill="#B6C0D1"><path d="M2 1l6 4-6 4z"></path></svg> 模型复杂度
+        </div>
+        <div style="display:flex; align-items:center; gap:9px; height:34px; padding:0 8px; border-radius:8px; font-size:13.5px; color:#4E5A6E; cursor:pointer;" style-hover="background:#F4F7FC">
+          <svg width="9" height="9" viewBox="0 0 10 10" fill="#B6C0D1"><path d="M2 1l6 4-6 4z"></path></svg> 泛化
+        </div>
+        <div style="display:flex; align-items:center; gap:9px; height:34px; padding:0 8px; border-radius:8px; font-size:13.5px; color:#4E5A6E; cursor:pointer;" style-hover="background:#F4F7FC">
+          <svg width="9" height="9" viewBox="0 0 10 10" fill="#B6C0D1"><path d="M2 1l6 4-6 4z"></path></svg> 剪枝
+        </div>
+      </div>
+
+      <div style="display:flex; align-items:center; gap:7px; font-size:12.5px; color:#8A94A6; padding:0 4px; margin:20px 0 6px;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8"></circle><path d="M12 8v4.4l3 1.8"></path></svg>
+        最近工作
+      </div>
+      <div style="display:flex; flex-direction:column; gap:2px;">
+        <div style="display:flex; align-items:center; gap:9px; height:34px; padding:0 9px; border-radius:8px; background:#EDF3FF; font-size:13.5px; color:#2F4670; cursor:pointer;">
+          <svg width="9" height="9" viewBox="0 0 10 10" fill="#8FAAE6"><path d="M2 1l6 4-6 4z"></path></svg>
+          实验 04
+          <span style="flex:1;"></span>
+          <span style="font-size:11.5px; color:#8FA0BE;">刚刚</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:9px; height:34px; padding:0 9px; border-radius:8px; font-size:13.5px; color:#4E5A6E; cursor:pointer;" style-hover="background:#F4F7FC">
+          <svg width="9" height="9" viewBox="0 0 10 10" fill="#B6C0D1"><path d="M2 1l6 4-6 4z"></path></svg>
+          实验 03
+          <span style="flex:1;"></span>
+          <span style="font-size:11.5px; color:#A6B0C3;">2 小时前</span>
+        </div>
+      </div>
+
+      <div style="flex:1; min-height:24px;"></div>
+      <div style="display:flex; align-items:center; gap:9px; padding:16px 4px 18px; border-top:1px solid #EAEEF6;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5EB98A" stroke-width="1.7"><path d="M12 21c0-5 1-8 6-11-6-1-9 1-10.5 4.5C6 18 8 21 12 21Z"></path><path d="M12 21C10 15 8 12 4 10"></path></svg>
+        <div style="font-size:11.5px; line-height:1.55; color:#94A0B4;">更好的学习，<br />源于真实的问题</div>
+      </div>
+    </aside>
+
+    <main style="flex:1; min-width:0; padding:20px 22px 26px; display:flex; flex-direction:column; gap:16px;">
+
+      <sc-if value="{{ isToday }}" hint-placeholder-val="{{ true }}">
+        <div style="display:flex; align-items:center; gap:20px; background:linear-gradient(180deg,#F1F6FF 0%,#EAF1FF 100%); border:1px solid #DCE7FA; border-radius:13px; padding:20px 24px;">
+          <div style="width:46px; height:46px; flex:none; border-radius:12px; background:#2F63E8; display:flex; align-items:center; justify-content:center;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8"><circle cx="12" cy="12" r="8.2"></circle><circle cx="12" cy="12" r="3.4"></circle><path d="M12 3.8v2M12 18.2v2M3.8 12h2M18.2 12h2"></path></svg>
+          </div>
+          <div style="flex:1; min-width:0;">
+            <h1 style="margin:0 0 7px; font-size:26px; font-weight:700; letter-spacing:-0.4px; color:#16233D;">我们正在研究：为什么树变深以后泛化变差？</h1>
+            <p style="margin:0; font-size:13.5px; line-height:1.6; color:#6C7A93; text-wrap:pretty;">通过实验观察决策树在不同复杂度下的训练误差和验证误差，理解过拟合的原因。</p>
+          </div>
+          <button style="flex:none; align-self:flex-end; display:flex; align-items:center; gap:6px; height:34px; padding:0 13px; border-radius:9px; border:1px solid #C9D9F7; background:#fff; color:#2F63E8; font-size:13px; font-weight:500; font-family:inherit; cursor:pointer;" style-hover="background:#F6FAFF">
+            研究模式
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 9l6 6 6-6"></path></svg>
+          </button>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isResume }}">
+        <div style="display:flex; align-items:center; gap:20px; background:#EDF3FF; border:1px solid #DCE7FA; border-radius:13px; padding:18px 22px;">
+          <div style="width:46px; height:46px; flex:none; border-radius:50%; background:#DDE8FE; display:flex; align-items:center; justify-content:center;">
+            <svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="#2F63E8" stroke-width="1.9"><path d="M4 12a8 8 0 1 0 2.4-5.7M4 5v4h4"></path><path d="M12 8.5V12l2.8 1.7"></path></svg>
+          </div>
+          <div style="flex:1; min-width:0;">
+            <h1 style="margin:0 0 6px; font-size:24px; font-weight:700; letter-spacing:-0.3px; color:#16233D;">继续昨天的研究</h1>
+            <p style="margin:0 0 5px; font-size:15px; font-weight:500; color:#3C4B66;">你停在：为什么 depth = 8 比 depth = 20 泛化更好？</p>
+            <p style="margin:0; font-size:12.5px; color:#7A8799;">我们已为你保存了上次的实验过程和思考，可以从这里继续探索。</p>
+          </div>
+          <button style="flex:none; display:flex; align-items:center; gap:8px; height:40px; padding:0 18px; border-radius:10px; border:none; background:#2F63E8; color:#fff; font-size:14px; font-weight:500; font-family:inherit; cursor:pointer; box-shadow:0 2px 8px rgba(47,99,232,.3);" style-hover="background:#2454CF">
+            从这里继续
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 12h15M13 6l6 6-6 6"></path></svg>
+          </button>
+        </div>
+      </sc-if>
+
+      <div style="display:flex; gap:20px; align-items:flex-start;">
+
+        <section style="flex:1; min-width:0; background:#fff; border:1px solid #E6EBF4; border-radius:13px; padding:18px 18px 16px; box-shadow:0 1px 2px rgba(23,43,77,.04);">
+          <div style="display:flex; align-items:center; gap:13px; margin-bottom:16px;">
+            <div style="width:38px; height:38px; flex:none; border-radius:10px; background:#2F63E8; display:flex; align-items:center; justify-content:center;">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.7"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3Z"></path><path d="M4 7.5l8 4.5 8-4.5M12 12v9"></path></svg>
+            </div>
+            <div style="flex:1; min-width:0;">
+              <sc-if value="{{ isToday }}" hint-placeholder-val="{{ true }}">
+                <div>
+                  <div style="font-size:17px; font-weight:700; color:#16233D;">主工作面</div>
+                  <div style="font-size:12.5px; color:#8A94A6; margin-top:3px;">当前正在查看：实验结果</div>
+                </div>
+              </sc-if>
+              <sc-if value="{{ isResume }}">
+                <div>
+                  <div style="font-size:17px; font-weight:700; color:#16233D;">上次的实验：训练集 vs 验证集损失对比</div>
+                  <div style="display:flex; gap:16px; font-size:12.5px; color:#8A94A6; margin-top:4px;">
+                    <span>上次更新时间：昨天 22:14</span>
+                    <span>实验：决策树，depth = 8 vs 20</span>
+                  </div>
+                </div>
+              </sc-if>
+            </div>
+            <div style="display:flex; gap:9px; flex:none;">
+              <button onClick="{{ toggleLinked }}" style="display:flex; align-items:center; gap:6px; height:34px; padding:0 12px; border-radius:9px; border:1px solid #E1E7F1; background:#fff; color:#4E5A6E; font-size:13px; font-family:inherit; cursor:pointer;" style-hover="background:#F4F7FC">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#7A8799" stroke-width="1.9"><path d="M9 7.5 4.5 12 9 16.5M15 7.5 19.5 12 15 16.5"></path></svg>
+                <span style="white-space:nowrap;">查看代码</span>
+              </button>
+              <button style="display:flex; align-items:center; gap:6px; height:34px; padding:0 12px; border-radius:9px; border:1px solid #E1E7F1; background:#fff; color:#4E5A6E; font-size:13px; font-family:inherit; cursor:pointer;" style-hover="background:#F4F7FC">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#7A8799" stroke-width="1.9"><path d="M12 4v10M7.5 10.5 12 15l4.5-4.5M5 19h14"></path></svg>
+                <span style="white-space:nowrap;">下载</span>
+              </button>
+              <button style="display:flex; align-items:center; gap:6px; height:34px; padding:0 12px; border-radius:9px; border:1px solid #E1E7F1; background:#fff; color:#4E5A6E; font-size:13px; font-family:inherit; cursor:pointer;" style-hover="background:#F4F7FC">
+                <span style="letter-spacing:1px; color:#7A8799;">···</span>
+                <span style="white-space:nowrap;">更多</span>
+              </button>
+            </div>
+          </div>
+
+          <div style="border:1px solid #EAEEF6; border-radius:11px; padding:18px 16px 10px; position:relative;">
+            <sc-if value="{{ isToday }}" hint-placeholder-val="{{ true }}">
+              <div>
+                <div style="font-size:17px; font-weight:700; color:#16233D; margin:0 4px 6px;">训练集 vs 验证集损失（决策树，depth = 20）</div>
+                <div style="position:relative;">
+                  <svg viewBox="0 0 900 400" style="width:100%; display:block;" onClick="{{ selectRegion }}">
+                    <rect x="64" y="18" width="776" height="330" fill="#fff"></rect>
+                    <rect x="364" y="18" width="476" height="330" fill="#FDF0EE" opacity="0.75"></rect>
+                    <g stroke="#F0F3F8" stroke-width="1">
+                      <path d="M64 18H840M64 128H840M64 238H840M64 348H840"></path>
+                      <path d="M64 18V348M189 18V348M314 18V348M440 18V348M565 18V348M690 18V348M815 18V348"></path>
+                    </g>
+                    <path d="M64 18V348H840" stroke="#C9D2E0" stroke-width="1.4" fill="none"></path>
+                    <g font-size="14" fill="#8A94A6" text-anchor="end" font-family="Noto Sans SC, sans-serif">
+                      <text x="52" y="23">10<tspan font-size="10" dy="-5">0</tspan></text>
+                      <text x="52" y="133">10<tspan font-size="10" dy="-5">-1</tspan></text>
+                      <text x="52" y="243">10<tspan font-size="10" dy="-5">-2</tspan></text>
+                      <text x="52" y="353">10<tspan font-size="10" dy="-5">-3</tspan></text>
+                    </g>
+                    <g font-size="14" fill="#8A94A6" text-anchor="middle" font-family="Noto Sans SC, sans-serif">
+                      <text x="64" y="370">0</text><text x="189" y="370">5</text><text x="314" y="370">10</text><text x="440" y="370">15</text><text x="565" y="370">20</text><text x="690" y="370">25</text><text x="815" y="370">30</text>
+                    </g>
+                    <text x="452" y="394" font-size="14" fill="#6C7A93" text-anchor="middle" font-family="Noto Sans SC, sans-serif">训练轮数 (Epoch)</text>
+                    <text x="26" y="183" font-size="14" fill="#6C7A93" text-anchor="middle" transform="rotate(-90 26 183)" font-family="Noto Sans SC, sans-serif">损失 (Log Loss)</text>
+                    <path d="M364 18V348" stroke="#8A94A6" stroke-width="1.4" stroke-dasharray="6 5"></path>
+                    <path d="{{ trainD }}" fill="none" stroke="#2F7DE8" stroke-width="2.4"></path>
+                    <path d="{{ valD }}" fill="none" stroke="#EF5B4C" stroke-width="2.4"></path>
+                    <sc-for list="{{ trainPts }}" as="p" hint-placeholder-count="0">
+                      <circle cx="{{ p.x }}" cy="{{ p.y }}" r="3.4" fill="#2F7DE8"></circle>
+                    </sc-for>
+                    <sc-for list="{{ valPts }}" as="p" hint-placeholder-count="0">
+                      <circle cx="{{ p.x }}" cy="{{ p.y }}" r="3.4" fill="#EF5B4C"></circle>
+                    </sc-for>
+                    <sc-if value="{{ hasSelection }}">
+                      <g>
+                        <rect x="364" y="18" width="151" height="330" fill="#EF5B4C" opacity="0.1"></rect>
+                        <path d="M364 18V348" stroke="#EF5B4C" stroke-width="1.6" stroke-dasharray="6 5"></path>
+                        <path d="M515 18V348" stroke="#EF5B4C" stroke-width="1.6" stroke-dasharray="6 5"></path>
+                        <path d="M370 60H509" stroke="#EF5B4C" stroke-width="1.6" marker-start="url(#arrL)" marker-end="url(#arrR)"></path>
+                        <defs>
+                          <marker id="arrR" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0l10 5-10 5z" fill="#EF5B4C"></path></marker>
+                          <marker id="arrL" viewBox="0 0 10 10" refX="2" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M10 0 0 5l10 5z" fill="#EF5B4C"></path></marker>
+                        </defs>
+                      </g>
+                    </sc-if>
+                  </svg>
+
+                  <div style="position:absolute; top:3%; right:2%; display:flex; flex-direction:column; gap:7px; background:#fff; border:1px solid #E6EBF4; border-radius:9px; padding:10px 13px; box-shadow:0 2px 6px rgba(23,43,77,.06);">
+                    <div style="display:flex; align-items:center; gap:8px; font-size:12.5px; color:#3C4B66; white-space:nowrap;">
+                      <svg width="26" height="8" viewBox="0 0 26 8"><path d="M0 4h26" stroke="#2F7DE8" stroke-width="2"></path><circle cx="13" cy="4" r="3.4" fill="#2F7DE8"></circle></svg>
+                      Train Loss（训练集损失）
+                    </div>
+                    <div style="display:flex; align-items:center; gap:8px; font-size:12.5px; color:#3C4B66; white-space:nowrap;">
+                      <svg width="26" height="8" viewBox="0 0 26 8"><path d="M0 4h26" stroke="#EF5B4C" stroke-width="2"></path><circle cx="13" cy="4" r="3.4" fill="#EF5B4C"></circle></svg>
+                      Validation Loss（验证集损失）
+                    </div>
+                  </div>
+
+                  <sc-if value="{{ noSelection }}" hint-placeholder-val="{{ true }}">
+                    <div>
+                      <div style="position:absolute; left:28%; top:30%; max-width:26%; background:#FDEAE7; border:1px solid #F6C9C2; border-radius:8px; padding:7px 11px; font-size:12.5px; line-height:1.5; color:#B4362A;">
+                        从这里开始<br />验证集误差开始上升
+                      </div>
+                      <div style="position:absolute; left:58%; top:39%; right:4%; font-size:12.5px; line-height:1.6; color:#C4796F; text-align:center;">
+                        模型开始过拟合<br />（训练集继续下降，验证集上升）
+                      </div>
+                    </div>
+                  </sc-if>
+
+                  <sc-if value="{{ hasSelection }}">
+                    <div style="position:absolute; left:33%; top:22%; display:flex; align-items:center; gap:10px; background:#FDEAE7; border:1px solid #F3B9B0; border-radius:8px; padding:7px 11px; font-size:12.5px; color:#B4362A; white-space:nowrap;">
+                      已选中：验证集误差上升区间
+                      <span onClick="{{ clearSelection }}" style="cursor:pointer; color:#D9705F; font-size:14px;">✕</span>
+                    </div>
+                  </sc-if>
+                </div>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ isResume }}">
+              <div>
+                <div style="font-size:17px; font-weight:700; color:#16233D; margin:0 4px 6px;">不同树深度的训练集 vs 验证集损失（上次的结果）</div>
+                <div style="position:relative;">
+                  <svg viewBox="0 0 900 400" style="width:100%; display:block;">
+                    <rect x="364" y="18" width="476" height="330" fill="#FDF3F1" opacity="0.7"></rect>
+                    <g stroke="#F0F3F8" stroke-width="1">
+                      <path d="M64 18H840M64 128H840M64 238H840M64 348H840"></path>
+                      <path d="M64 18V348M189 18V348M314 18V348M440 18V348M565 18V348M690 18V348M815 18V348"></path>
+                    </g>
+                    <path d="M64 18V348H840" stroke="#C9D2E0" stroke-width="1.4" fill="none"></path>
+                    <g font-size="14" fill="#8A94A6" text-anchor="end" font-family="Noto Sans SC, sans-serif">
+                      <text x="52" y="23">10<tspan font-size="10" dy="-5">0</tspan></text>
+                      <text x="52" y="133">10<tspan font-size="10" dy="-5">-1</tspan></text>
+                      <text x="52" y="243">10<tspan font-size="10" dy="-5">-2</tspan></text>
+                      <text x="52" y="353">10<tspan font-size="10" dy="-5">-3</tspan></text>
+                    </g>
+                    <g font-size="14" fill="#8A94A6" text-anchor="middle" font-family="Noto Sans SC, sans-serif">
+                      <text x="64" y="370">0</text><text x="189" y="370">5</text><text x="314" y="370">10</text><text x="440" y="370">15</text><text x="565" y="370">20</text><text x="690" y="370">25</text><text x="815" y="370">30</text>
+                    </g>
+                    <text x="452" y="394" font-size="14" fill="#6C7A93" text-anchor="middle" font-family="Noto Sans SC, sans-serif">训练轮数 (Epoch)</text>
+                    <text x="26" y="183" font-size="14" fill="#6C7A93" text-anchor="middle" transform="rotate(-90 26 183)" font-family="Noto Sans SC, sans-serif">损失 (Log Loss)</text>
+                    <path d="M364 18V348" stroke="#8A94A6" stroke-width="1.4" stroke-dasharray="6 5"></path>
+                    <path d="{{ b1D }}" fill="none" stroke="#2F7DE8" stroke-width="2.3"></path>
+                    <path d="{{ b2D }}" fill="none" stroke="#7FA9EE" stroke-width="2.3" stroke-dasharray="7 5"></path>
+                    <path d="{{ r1D }}" fill="none" stroke="#EF5B4C" stroke-width="2.3"></path>
+                    <path d="{{ r2D }}" fill="none" stroke="#F19086" stroke-width="2.3" stroke-dasharray="7 5"></path>
+                    <sc-for list="{{ b1P }}" as="p" hint-placeholder-count="0"><circle cx="{{ p.x }}" cy="{{ p.y }}" r="3.2" fill="#2F7DE8"></circle></sc-for>
+                    <sc-for list="{{ b2P }}" as="p" hint-placeholder-count="0"><circle cx="{{ p.x }}" cy="{{ p.y }}" r="3.2" fill="#7FA9EE"></circle></sc-for>
+                    <sc-for list="{{ r1P }}" as="p" hint-placeholder-count="0"><circle cx="{{ p.x }}" cy="{{ p.y }}" r="3.2" fill="#EF5B4C"></circle></sc-for>
+                    <sc-for list="{{ r2P }}" as="p" hint-placeholder-count="0"><circle cx="{{ p.x }}" cy="{{ p.y }}" r="3.2" fill="#F19086"></circle></sc-for>
+                  </svg>
+                  <div style="position:absolute; top:2%; right:2%; display:flex; flex-direction:column; gap:6px; background:#fff; border:1px solid #E6EBF4; border-radius:9px; padding:9px 12px; box-shadow:0 2px 6px rgba(23,43,77,.06);">
+                    <div style="display:flex; align-items:center; gap:8px; font-size:12px; color:#3C4B66; white-space:nowrap;"><svg width="26" height="8" viewBox="0 0 26 8"><path d="M0 4h26" stroke="#2F7DE8" stroke-width="2"></path><circle cx="13" cy="4" r="3.2" fill="#2F7DE8"></circle></svg>depth = 8（训练集损失）</div>
+                    <div style="display:flex; align-items:center; gap:8px; font-size:12px; color:#3C4B66; white-space:nowrap;"><svg width="26" height="8" viewBox="0 0 26 8"><path d="M0 4h26" stroke="#7FA9EE" stroke-width="2" stroke-dasharray="5 3"></path><circle cx="13" cy="4" r="3.2" fill="#7FA9EE"></circle></svg>depth = 8（验证集损失）</div>
+                    <div style="display:flex; align-items:center; gap:8px; font-size:12px; color:#3C4B66; white-space:nowrap;"><svg width="26" height="8" viewBox="0 0 26 8"><path d="M0 4h26" stroke="#EF5B4C" stroke-width="2"></path><circle cx="13" cy="4" r="3.2" fill="#EF5B4C"></circle></svg>depth = 20（训练集损失）</div>
+                    <div style="display:flex; align-items:center; gap:8px; font-size:12px; color:#3C4B66; white-space:nowrap;"><svg width="26" height="8" viewBox="0 0 26 8"><path d="M0 4h26" stroke="#F19086" stroke-width="2" stroke-dasharray="5 3"></path><circle cx="13" cy="4" r="3.2" fill="#F19086"></circle></svg>depth = 20（验证集损失）</div>
+                  </div>
+                  <div style="position:absolute; left:52%; top:27%; background:#FDEAE7; border-radius:8px; padding:8px 11px; font-size:12.5px; line-height:1.5; color:#B4362A;">
+                    depth = 20<br />验证集损失开始上升<br />（过拟合）
+                  </div>
+                  <div style="position:absolute; left:63%; top:57%; background:#E7F0FF; border-radius:8px; padding:8px 11px; font-size:12.5px; line-height:1.5; color:#28509E;">
+                    depth = 8<br />泛化更好
+                  </div>
+                </div>
+              </div>
+            </sc-if>
+          </div>
+
+          <sc-if value="{{ isToday }}" hint-placeholder-val="{{ true }}">
+            <div style="display:flex; align-items:stretch; background:#F6F8FC; border:1px solid #EAEEF6; border-radius:11px; margin-top:14px;">
+              <div style="flex:1; display:flex; align-items:center; gap:11px; padding:14px 16px;">
+                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#8A94A6" stroke-width="1.7"><circle cx="12" cy="12" r="3"></circle><path d="M12 3v2.5M12 18.5V21M4.2 7.5l2.2 1.3M17.6 15.2l2.2 1.3M4.2 16.5l2.2-1.3M17.6 8.8l2.2-1.3"></path></svg>
+                <div>
+                  <div style="font-size:12.5px; color:#8A94A6; margin-bottom:3px;">树的最大深度</div>
+                  <div style="font-size:15px; font-weight:700; color:#22365C;">depth = 20</div>
+                </div>
+              </div>
+              <div style="width:1px; background:#E6EBF4; margin:12px 0;"></div>
+              <div style="flex:1; display:flex; align-items:center; gap:11px; padding:14px 16px;">
+                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#8A94A6" stroke-width="1.8"><path d="M5 19V13M11 19V6M17 19v-8"></path></svg>
+                <div>
+                  <div style="font-size:12.5px; color:#8A94A6; margin-bottom:3px;">验证集误差开始变差</div>
+                  <div style="font-size:15px; font-weight:700; color:#22365C;">第 12 轮以后</div>
+                </div>
+              </div>
+              <div style="width:1px; background:#E6EBF4; margin:12px 0;"></div>
+              <div style="flex:1; display:flex; align-items:center; gap:11px; padding:14px 16px;">
+                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#8A94A6" stroke-width="1.8"><circle cx="12" cy="12" r="8"></circle><path d="M12 8v4.3l3 1.7"></path></svg>
+                <div>
+                  <div style="font-size:12.5px; color:#8A94A6; margin-bottom:3px;">运行时间</div>
+                  <div style="font-size:15px; font-weight:700; color:#22365C;">18.4 秒</div>
+                </div>
+              </div>
+              <sc-if value="{{ noLinked }}" hint-placeholder-val="{{ true }}">
+                <div style="display:flex; align-items:stretch;">
+                  <div style="width:1px; background:#E6EBF4; margin:12px 0;"></div>
+                  <div style="flex:1; display:flex; align-items:center; gap:11px; padding:14px 16px;">
+                    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#8A94A6" stroke-width="1.7"><path d="M6 3h8l4 4v14H6V3Z"></path><path d="M14 3v4h4"></path></svg>
+                    <div>
+                      <div style="font-size:12.5px; color:#8A94A6; margin-bottom:3px;">实验版本</div>
+                      <div style="font-size:15px; font-weight:700; color:#22365C;">v1.0 (A)</div>
+                    </div>
+                  </div>
+                </div>
+              </sc-if>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ isResume }}">
+            <div style="border:1px solid #EAEEF6; border-radius:11px; margin-top:14px; padding:15px 16px 16px;">
+              <div style="display:flex; align-items:center; gap:11px; margin-bottom:14px;">
+                <div style="width:32px; height:32px; border-radius:50%; background:#2F63E8; display:flex; align-items:center; justify-content:center;">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9"><circle cx="12" cy="12" r="8"></circle><path d="M12 8v4.3l3 1.7"></path></svg>
+                </div>
+                <div style="font-size:15.5px; font-weight:700; color:#16233D;">上次已保存的内容</div>
+                <span style="flex:1;"></span>
+                <span style="font-size:12.5px; color:#8A94A6;">保存于 2024-06-16 22:14</span>
+              </div>
+              <div style="display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px;">
+                <div style="border:1px solid #E6EBF4; border-radius:10px; padding:13px 14px; display:flex; gap:11px; align-items:flex-start; cursor:pointer;" style-hover="border-color:#C9D9F7;background:#FAFCFF">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2F63E8" stroke-width="1.8" style="flex:none; margin-top:2px;"><path d="M4 16l5-6 4 3 6-8"></path></svg>
+                  <div style="flex:1; min-width:0;">
+                    <div style="font-size:13.5px; font-weight:500; color:#22365C;">曲线对比图</div>
+                    <div style="font-size:12px; color:#8A94A6; margin:3px 0 7px;">depth=8 vs 20</div>
+                    <div style="display:flex; align-items:center; gap:5px; font-size:12px; color:#3E9E6E;">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="9"></circle><path d="M8 12.5l2.6 2.5L16 9.5"></path></svg>
+                      已保存
+                    </div>
+                  </div>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#B6C0D1" stroke-width="2.2" style="flex:none; margin-top:3px;"><path d="M9 6l6 6-6 6"></path></svg>
+                </div>
+                <div style="border:1px solid #E6EBF4; border-radius:10px; padding:13px 14px; display:flex; gap:11px; align-items:flex-start; cursor:pointer;" style-hover="border-color:#C9D9F7;background:#FAFCFF">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2F63E8" stroke-width="1.8" style="flex:none; margin-top:2px;"><rect x="9" y="3" width="6" height="4" rx="1"></rect><rect x="3" y="16" width="6" height="4" rx="1"></rect><rect x="15" y="16" width="6" height="4" rx="1"></rect><path d="M12 7v5M6 16v-4h12v4"></path></svg>
+                  <div style="flex:1; min-width:0;">
+                    <div style="font-size:13.5px; font-weight:500; color:#22365C;">树结构对比</div>
+                    <div style="font-size:12px; color:#8A94A6; margin:3px 0 7px;">可视化（两个树）</div>
+                    <div style="display:flex; align-items:center; gap:5px; font-size:12px; color:#3E9E6E;">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="9"></circle><path d="M8 12.5l2.6 2.5L16 9.5"></path></svg>
+                      已保存
+                    </div>
+                  </div>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#B6C0D1" stroke-width="2.2" style="flex:none; margin-top:3px;"><path d="M9 6l6 6-6 6"></path></svg>
+                </div>
+                <div style="border:1px solid #E6EBF4; border-radius:10px; padding:13px 14px; display:flex; gap:11px; align-items:flex-start; cursor:pointer;" style-hover="border-color:#C9D9F7;background:#FAFCFF">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2F63E8" stroke-width="1.9" style="flex:none; margin-top:2px;"><path d="M9 7.5 4.5 12 9 16.5M15 7.5 19.5 12 15 16.5"></path></svg>
+                  <div style="flex:1; min-width:0;">
+                    <div style="font-size:13.5px; font-weight:500; color:#22365C;">对应代码</div>
+                    <div style="font-size:12px; color:#8A94A6; margin:3px 0 7px;">实验脚本 (.py)</div>
+                    <div style="display:flex; align-items:center; gap:5px; font-size:12px; color:#3E9E6E;">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="9"></circle><path d="M8 12.5l2.6 2.5L16 9.5"></path></svg>
+                      已保存
+                    </div>
+                  </div>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#B6C0D1" stroke-width="2.2" style="flex:none; margin-top:3px;"><path d="M9 6l6 6-6 6"></path></svg>
+                </div>
+                <div style="border:1px solid #E6EBF4; border-radius:10px; padding:13px 14px; display:flex; gap:11px; align-items:flex-start; cursor:pointer;" style-hover="border-color:#C9D9F7;background:#FAFCFF">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2F63E8" stroke-width="1.7" style="flex:none; margin-top:2px;"><path d="M6 3h8l4 4v14H6V3Z"></path><path d="M14 3v4h4M9 12h6M9 16h4"></path></svg>
+                  <div style="flex:1; min-width:0;">
+                    <div style="font-size:13.5px; font-weight:500; color:#22365C;">你的判断</div>
+                    <div style="font-size:12px; color:#8A94A6; margin:3px 0 7px;">笔记: 降低复杂度…</div>
+                    <div style="display:flex; align-items:center; gap:5px; font-size:12px; color:#3E9E6E;">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="9"></circle><path d="M8 12.5l2.6 2.5L16 9.5"></path></svg>
+                      已保存
+                    </div>
+                  </div>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#B6C0D1" stroke-width="2.2" style="flex:none; margin-top:3px;"><path d="M9 6l6 6-6 6"></path></svg>
+                </div>
+              </div>
+            </div>
+          </sc-if>
+
+          <div style="display:flex; align-items:center; gap:11px; border:1px solid #EAEEF6; border-radius:11px; margin-top:12px; padding:0 16px; height:48px; cursor:pointer;" style-hover="background:#FAFCFF">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8A94A6" stroke-width="1.8"><path d="M4 7h16M4 12h16M4 17h10"></path></svg>
+            <sc-if value="{{ isToday }}" hint-placeholder-val="{{ true }}">
+              <span style="font-size:13.5px; font-weight:500; color:#3C4B66;">实验设置（点击展开）</span>
+            </sc-if>
+            <sc-if value="{{ isResume }}">
+              <span style="font-size:13.5px; font-weight:500; color:#3C4B66;">实验设置（上次的配置）</span>
+            </sc-if>
+            <span style="flex:1;"></span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#A6B0C3" stroke-width="2.2"><path d="M6 9l6 6 6-6"></path></svg>
+          </div>
+        </section>
+
+        <sc-if value="{{ showLinked }}">
+          <section style="width:474px; flex:none; background:#fff; border:1px solid #E6EBF4; border-radius:13px; padding:18px; box-shadow:0 1px 2px rgba(23,43,77,.04); position:relative;">
+            <div style="position:absolute; left:-21px; top:38px; width:9px; height:9px; border-radius:50%; background:#2F63E8;"></div>
+            <div style="display:flex; align-items:center; gap:13px; margin-bottom:16px;">
+              <div style="width:38px; height:38px; flex:none; border-radius:10px; background:#2F63E8; display:flex; align-items:center; justify-content:center;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"></path><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"></path></svg>
+              </div>
+              <div style="flex:1; min-width:0;">
+                <div style="font-size:16.5px; font-weight:700; color:#16233D;">关联对象：树结构对比</div>
+                <div style="font-size:12.5px; color:#8A94A6; margin-top:3px;">对比不同深度下的决策树结构</div>
+              </div>
+              <div style="display:flex; gap:7px; flex:none;">
+                <button style="width:34px; height:34px; display:flex; align-items:center; justify-content:center; border-radius:9px; border:1px solid #E1E7F1; background:#fff; cursor:pointer;" style-hover="background:#F4F7FC">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#7A8799" stroke-width="1.9"><path d="M9 7.5 4.5 12 9 16.5M15 7.5 19.5 12 15 16.5"></path></svg>
+                </button>
+                <button style="width:34px; height:34px; display:flex; align-items:center; justify-content:center; border-radius:9px; border:1px solid #E1E7F1; background:#fff; cursor:pointer;" style-hover="background:#F4F7FC">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#7A8799" stroke-width="1.9"><path d="M12 4v10M7.5 10.5 12 15l4.5-4.5M5 19h14"></path></svg>
+                </button>
+                <button onClick="{{ toggleLinked }}" style="height:34px; padding:0 12px; border-radius:9px; border:1px solid #E1E7F1; background:#fff; color:#4E5A6E; font-size:13px; font-family:inherit; cursor:pointer;" style-hover="background:#F4F7FC">更多</button>
+              </div>
+            </div>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
+              <div style="border:1px solid #E6EBF4; border-radius:11px; padding:15px 14px; display:flex; flex-direction:column; align-items:center;">
+                <div style="font-size:15px; font-weight:700; color:#16233D; align-self:flex-start;">浅树（depth = 3）</div>
+                <div style="margin:10px 0 6px; font-size:12.5px; font-weight:500; color:#28509E; background:#E7F0FF; border-radius:7px; padding:5px 12px;">更简单</div>
+                <svg viewBox="0 0 200 180" style="width:100%; max-width:200px; margin:6px 0 12px;">
+                  <g stroke="#B9CDEF" stroke-width="1.6">
+                    <path d="M100 38 60 88M100 38 140 88M60 88 34 140M60 88 86 140M140 88 114 140M140 88 166 140"></path>
+                  </g>
+                  <circle cx="100" cy="34" r="15" fill="#3E7BE8"></circle>
+                  <circle cx="60" cy="88" r="13" fill="#A9C6FA"></circle>
+                  <circle cx="140" cy="88" r="13" fill="#A9C6FA"></circle>
+                  <circle cx="34" cy="142" r="11" fill="#8BD9B0"></circle>
+                  <circle cx="86" cy="142" r="11" fill="#8BD9B0"></circle>
+                  <circle cx="114" cy="142" r="11" fill="#8BD9B0"></circle>
+                  <circle cx="166" cy="142" r="11" fill="#8BD9B0"></circle>
+                </svg>
+                <div style="width:100%; background:#F1F5FC; border-radius:9px; padding:11px; text-align:center;">
+                  <div style="font-size:15px; font-weight:700; color:#22365C;">3 层</div>
+                  <div style="font-size:12.5px; color:#7A8799; margin-top:3px;">共 7 个节点</div>
+                </div>
+              </div>
+
+              <div style="border:1px solid #F6DCD7; border-radius:11px; background:#FEF8F6; padding:15px 14px; display:flex; flex-direction:column; align-items:center;">
+                <div style="font-size:15px; font-weight:700; color:#16233D; align-self:flex-start;">深树（depth = 20）</div>
+                <div style="margin:10px 0 6px; font-size:12.5px; font-weight:500; color:#B4362A; background:#FBDDD8; border-radius:7px; padding:5px 12px;">更复杂</div>
+                <svg viewBox="0 0 200 180" style="width:100%; max-width:200px; margin:6px 0 12px;">
+                  <g stroke="#C6D6F2" stroke-width="1.3">
+                    <path d="M100 22 62 56M100 22 138 56M62 56 40 88M62 56 84 88M138 56 116 88M138 56 160 88M40 88 28 116M40 88 52 116M160 88 148 116M160 88 172 116M52 128 40 156M52 128 64 156M148 128 136 156M148 128 160 156"></path>
+                  </g>
+                  <circle cx="100" cy="20" r="12" fill="#3E7BE8"></circle>
+                  <circle cx="62" cy="56" r="9.5" fill="#A9C6FA"></circle>
+                  <circle cx="138" cy="56" r="9.5" fill="#A9C6FA"></circle>
+                  <circle cx="40" cy="88" r="8" fill="#A9C6FA"></circle>
+                  <circle cx="84" cy="88" r="8" fill="#A9C6FA"></circle>
+                  <circle cx="116" cy="88" r="8" fill="#A9C6FA"></circle>
+                  <circle cx="160" cy="88" r="8" fill="#A9C6FA"></circle>
+                  <circle cx="28" cy="116" r="7" fill="#8BD9B0"></circle>
+                  <circle cx="52" cy="116" r="7" fill="#8BD9B0"></circle>
+                  <circle cx="148" cy="116" r="7" fill="#8BD9B0"></circle>
+                  <circle cx="172" cy="116" r="7" fill="#8BD9B0"></circle>
+                  <circle cx="52" cy="128" r="7.5" fill="#A9C6FA"></circle>
+                  <circle cx="148" cy="128" r="7.5" fill="#A9C6FA"></circle>
+                  <circle cx="40" cy="158" r="6.5" fill="#8BD9B0"></circle>
+                  <circle cx="64" cy="158" r="6.5" fill="#8BD9B0"></circle>
+                  <circle cx="136" cy="158" r="6.5" fill="#8BD9B0"></circle>
+                  <circle cx="160" cy="158" r="6.5" fill="#8BD9B0"></circle>
+                  <g fill="#9AA6BA"><circle cx="100" cy="112" r="1.8"></circle><circle cx="100" cy="120" r="1.8"></circle><circle cx="100" cy="128" r="1.8"></circle></g>
+                </svg>
+                <div style="width:100%; background:#FBE9E5; border-radius:9px; padding:11px; text-align:center;">
+                  <div style="font-size:15px; font-weight:700; color:#22365C;">20 层</div>
+                  <div style="font-size:12.5px; color:#8A7470; margin-top:3px;">共 2,097,151 个节点</div>
+                </div>
+              </div>
+            </div>
+
+            <div style="display:flex; gap:12px; align-items:flex-start; background:#FFF9EC; border:1px solid #F5E3BE; border-radius:11px; padding:14px 15px; margin-top:14px;">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#D99B1F" stroke-width="1.8" style="flex:none;"><path d="M9 17h6M10 21h4M12 3a6 6 0 0 1 3.6 10.8c-.4.3-.6.8-.6 1.2H9c0-.4-.2-.9-.6-1.2A6 6 0 0 1 12 3Z"></path></svg>
+              <div style="font-size:13px; line-height:1.7; color:#6B5A34; text-wrap:pretty;">树越深，模型越复杂，更容易记住训练集的细节，从而导致验证集误差上升。</div>
+            </div>
+          </section>
+        </sc-if>
+      </div>
+    </main>
+
+    <sc-if value="{{ showAI }}" hint-placeholder-val="{{ true }}">
+      <aside style="width:292px; flex:none; background:#fff; border-left:1px solid #E6EBF4; display:flex; flex-direction:column;">
+        <div style="display:flex; align-items:center; gap:9px; padding:14px 16px; border-bottom:1px solid #EFF2F8;">
+          <div style="width:28px; height:28px; border-radius:50%; background:#DDE8FE; display:flex; align-items:center; justify-content:center;">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#2F63E8" stroke-width="1.8"><circle cx="12" cy="12" r="8.5"></circle><circle cx="9.3" cy="11" r="1.2" fill="#2F63E8" stroke="none"></circle><circle cx="14.7" cy="11" r="1.2" fill="#2F63E8" stroke="none"></circle><path d="M9.5 15.2c1.6 1 3.4 1 5 0"></path></svg>
+          </div>
+          <span style="font-size:14.5px; font-weight:700; color:#16233D;">AI 老师</span>
+          <span style="display:flex; align-items:center; gap:5px; font-size:11.5px; color:#3E9E6E; background:#EAF7F0; border-radius:6px; padding:3px 7px;">
+            <span style="width:6px; height:6px; border-radius:50%; background:#3E9E6E; display:inline-block;"></span>在线
+          </span>
+          <span style="flex:1;"></span>
+          <span style="color:#B6C0D1; letter-spacing:1px; cursor:pointer;">···</span>
+        </div>
+
+        <div style="padding:16px; display:flex; flex-direction:column; gap:14px; flex:1; min-height:0;">
+          <div style="display:flex; justify-content:center;">
+            <svg viewBox="0 0 160 150" style="width:{{ mascotW }}; max-width:170px;">
+              <ellipse cx="80" cy="140" rx="42" ry="7" fill="#E9EFFA"></ellipse>
+              <path d="M80 18v-7" stroke="#8FB0EE" stroke-width="3"></path><circle cx="80" cy="9" r="4.5" fill="#5BC8E8"></circle>
+              <rect x="42" y="20" width="76" height="62" rx="24" fill="#E8EFFB" stroke="#B9CDEF" stroke-width="2"></rect>
+              <rect x="52" y="32" width="56" height="38" rx="18" fill="#2B3E66"></rect>
+              <circle cx="68" cy="51" r="7.5" fill="#5BC8E8"></circle>
+              <circle cx="92" cy="51" r="7.5" fill="#5BC8E8"></circle>
+              <rect x="56" y="88" width="48" height="40" rx="14" fill="#DCE6F8" stroke="#B9CDEF" stroke-width="2"></rect>
+              <rect x="70" y="100" width="20" height="14" rx="5" fill="#BBD2F3"></rect>
+              <rect x="34" y="90" width="16" height="32" rx="8" fill="#CFDDF5" stroke="#B9CDEF" stroke-width="1.6"></rect>
+              <rect x="110" y="90" width="16" height="32" rx="8" fill="#CFDDF5" stroke="#B9CDEF" stroke-width="1.6"></rect>
+            </svg>
+          </div>
+
+          <div style="position:relative; background:#F4F7FC; border:1px solid #E6EBF4; border-radius:12px; padding:14px 15px; font-size:13.5px; line-height:1.85; color:#3C4B66; text-wrap:pretty;">
+            <sc-if value="{{ isDefaultTalk }}" hint-placeholder-val="{{ true }}">
+              <div>
+                <p style="margin:0 0 12px;">我注意到你正在看验证集误差上升的位置。</p>
+                <p style="margin:0;">这通常是过拟合的一个典型信号。需要我为你解释一下为什么会出现这种现象吗？</p>
+              </div>
+            </sc-if>
+            <sc-if value="{{ isSelectTalk }}">
+              <div>
+                <p style="margin:0 0 12px;">我知道你在看这段变化。</p>
+                <p style="margin:0;">这是第 12–18 轮之间，验证集误差开始上升的区间。通常这意味着模型开始过拟合。你想让我帮你分析这段变化吗？</p>
+              </div>
+            </sc-if>
+            <sc-if value="{{ isLinkedTalk }}">
+              <div>
+                <p style="margin:0;">先比较这两棵树，再回头看曲线变化。</p>
+              </div>
+            </sc-if>
+            <sc-if value="{{ isResume }}">
+              <div>
+                <p style="margin:0 0 12px;">昨天我们已经发现：降低复杂度后泛化更好。</p>
+                <p style="margin:0;">今天要继续验证为什么 depth = 8 比 depth = 20 泛化更好吗？</p>
+              </div>
+            </sc-if>
+          </div>
+
+          <div style="display:flex; flex-direction:column; gap:9px;">
+            <sc-if value="{{ isSelectTalk }}">
+              <div style="display:flex; flex-direction:column; gap:9px;">
+                <button style="display:flex; align-items:center; justify-content:center; gap:8px; height:44px; border-radius:10px; border:none; background:#2F63E8; color:#fff; font-size:14.5px; font-weight:500; font-family:inherit; cursor:pointer; box-shadow:0 2px 8px rgba(47,99,232,.28);" style-hover="background:#2454CF">
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 19V13M11 19V6M17 19v-8"></path></svg>
+                  分析这段
+                </button>
+                <button onClick="{{ clearSelection }}" style="display:flex; align-items:center; justify-content:center; gap:8px; height:44px; border-radius:10px; border:1px solid #DCE3EE; background:#fff; color:#3C4B66; font-size:14.5px; font-family:inherit; cursor:pointer;" style-hover="background:#F6F8FC">
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#5B677C" stroke-width="1.9"><path d="M2.5 12S6 6 12 6s9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z"></path><circle cx="12" cy="12" r="2.6"></circle></svg>
+                  继续观察
+                </button>
+              </div>
+            </sc-if>
+            <sc-if value="{{ isResume }}">
+              <div style="display:flex; flex-direction:column; gap:9px;">
+                <button style="display:flex; align-items:center; justify-content:center; gap:8px; height:44px; border-radius:10px; border:none; background:#2F63E8; color:#fff; font-size:14.5px; font-weight:500; font-family:inherit; cursor:pointer; box-shadow:0 2px 8px rgba(47,99,232,.28);" style-hover="background:#2454CF">
+                  继续探索
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 12h15M13 6l6 6-6 6"></path></svg>
+                </button>
+                <button style="display:flex; align-items:center; justify-content:center; gap:8px; height:44px; border-radius:10px; border:1px solid #DCE3EE; background:#fff; color:#3C4B66; font-size:14.5px; font-family:inherit; cursor:pointer;" style-hover="background:#F6F8FC">
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#5B677C" stroke-width="1.9"><path d="M2.5 12S6 6 12 6s9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z"></path><circle cx="12" cy="12" r="2.6"></circle></svg>
+                  查看上次的思考
+                </button>
+              </div>
+            </sc-if>
+            <sc-if value="{{ isExplainTalk }}" hint-placeholder-val="{{ true }}">
+              <div style="display:flex; flex-direction:column; gap:9px;">
+                <button onClick="{{ selectRegion }}" style="display:flex; align-items:center; justify-content:center; gap:8px; height:44px; border-radius:10px; border:none; background:#2F63E8; color:#fff; font-size:14.5px; font-weight:500; font-family:inherit; cursor:pointer; box-shadow:0 2px 8px rgba(47,99,232,.28);" style-hover="background:#2454CF">
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 21s7-5.4 7-11a7 7 0 1 0-14 0c0 5.6 7 11 7 11Z"></path><circle cx="12" cy="10" r="2.4"></circle></svg>
+                  让我解释
+                </button>
+                <button onClick="{{ toggleLinked }}" style="display:flex; align-items:center; justify-content:center; gap:8px; height:44px; border-radius:10px; border:1px solid #DCE3EE; background:#fff; color:#3C4B66; font-size:14.5px; font-family:inherit; cursor:pointer;" style-hover="background:#F6F8FC">
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#5B677C" stroke-width="1.9"><path d="M2.5 12S6 6 12 6s9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z"></path><circle cx="12" cy="12" r="2.6"></circle></svg>
+                  我自己先看
+                </button>
+              </div>
+            </sc-if>
+          </div>
+
+          <div style="height:1px; background:#EFF2F8;"></div>
+
+          <div style="font-size:12.5px; color:#8A94A6;">你可能还想了解</div>
+          <div style="display:flex; flex-direction:column; gap:9px;">
+            <sc-for list="{{ suggestions }}" as="s" hint-placeholder-count="3">
+              <div style="display:flex; align-items:center; gap:8px; border:1px solid #E6EBF4; border-radius:9px; padding:11px 12px; font-size:13px; color:#3C4B66; cursor:pointer;" style-hover="border-color:#C9D9F7;background:#FAFCFF">
+                <span style="flex:1; line-height:1.5;">{{ s }}</span>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#B6C0D1" stroke-width="2.2" style="flex:none;"><path d="M9 6l6 6-6 6"></path></svg>
+              </div>
+            </sc-for>
+          </div>
+
+          <div style="flex:1; min-height:12px;"></div>
+
+          <div>
+            <div style="display:flex; align-items:center; gap:8px; border:1px solid #E1E7F1; border-radius:11px; padding:11px 12px; background:#FBFCFE;">
+              <input placeholder="有其他问题随时问我…" style="flex:1; min-width:0; border:none; outline:none; background:transparent; font-size:13px; font-family:inherit; color:#3C4B66;" />
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#2F63E8" stroke-width="1.9" style="cursor:pointer;"><path d="M4 12l16-7-7 16-2.4-6.6L4 12Z"></path></svg>
+            </div>
+            <div style="text-align:right; font-size:11.5px; color:#A6B0C3; margin-top:7px;">Shift + Enter 换行</div>
+          </div>
+        </div>
+      </aside>
+    </sc-if>
+  </div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1460,&quot;height&quot;:940},&quot;session&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;today&quot;,&quot;resume&quot;],&quot;default&quot;:&quot;today&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;工作台状态&quot;},&quot;linkedOpen&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;工作台状态&quot;},&quot;showAI&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;布局&quot;}}">
+const X0 = 64, X1 = 840, Y0 = 18, Y1 = 348, N = 31;
+const px = e => X0 + (e / N) * (X1 - X0);
+const py = v => Y0 + (-Math.log10(v) / 3) * (Y1 - Y0);
+
+function series(fn) {
+  const pts = [];
+  for (let e = 0; e <= N; e++) pts.push({ x: +px(e).toFixed(1), y: +py(fn(e)).toFixed(1) });
+  return pts;
+}
+const path = pts => pts.map((p, i) => (i ? "L" : "M") + p.x + " " + p.y).join(" ");
+const rise = (e, k, p) => (e > 10 ? k * Math.pow(e - 10, p) : 0);
+
+const CURVES = {
+  train: e => 0.5 * Math.exp(-0.35 * e) + 0.0017,
+  val: e => 0.45 * Math.exp(-0.42 * e) + 0.0138 + rise(e, 0.00035, 1.55),
+  b1: e => 0.5 * Math.exp(-0.35 * e) + 0.0024,
+  b2: e => 0.45 * Math.exp(-0.3 * e) + 0.0027,
+  r1: e => 0.5 * Math.exp(-0.4 * e) + 0.013 + rise(e, 0.0013, 1.5),
+  r2: e => 0.45 * Math.exp(-0.4 * e) + 0.0135 + rise(e, 0.00035, 1.55)
+};
+
+const SUGGEST = {
+  default: ["树的深度如何影响模型复杂度？", "剪枝如何缓解过拟合？", "在实际问题中如何选择合适的深度？"],
+  selected: ["为什么验证集误差会在此处上升？", "这与模型复杂度有什么关系？", "接下来可以尝试哪些改进？"],
+  resume: ["为什么复杂的树更容易过拟合？", "如何从偏差-方差角度理解？", "接下来可以设计哪些验证实验？"]
+};
+
+class Component extends DCLogic {
+  state = { selected: false, linked: false };
+
+  renderVals() {
+    const isResume = (this.props.session ?? "today") === "resume";
+    const isToday = !isResume;
+    const linked = isToday && (this.state.linked || !!this.props.linkedOpen);
+    const selected = isToday && !linked && this.state.selected;
+
+    const pts = {};
+    for (const k in CURVES) pts[k] = series(CURVES[k]);
+
+    return {
+      isToday, isResume,
+      showLinked: linked,
+      noLinked: !linked,
+      hasSelection: selected,
+      noSelection: isToday && !selected,
+      showAI: this.props.showAI ?? true,
+      mascotW: linked ? "116px" : "170px",
+      isDefaultTalk: isToday && !selected && !linked,
+      isSelectTalk: selected,
+      isLinkedTalk: linked,
+      isExplainTalk: isToday && !selected,
+      suggestions: isResume ? SUGGEST.resume : selected ? SUGGEST.selected : SUGGEST.default,
+      trainD: path(pts.train), valD: path(pts.val),
+      trainPts: pts.train, valPts: pts.val,
+      b1D: path(pts.b1), b2D: path(pts.b2), r1D: path(pts.r1), r2D: path(pts.r2),
+      b1P: pts.b1, b2P: pts.b2, r1P: pts.r1, r2P: pts.r2,
+      selectRegion: () => this.setState({ selected: true, linked: false }),
+      clearSelection: () => this.setState({ selected: false }),
+      toggleLinked: () => this.setState(s => ({ linked: !s.linked, selected: false }))
+    };
+  }
+}
+
+</script>
+</body>
+</html>
